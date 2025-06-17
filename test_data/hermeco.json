@@ -1,0 +1,35 @@
+{
+    "comprador": {
+      "nit": "CN890924167",
+      "razon_social": "C.I. HERMECO S.A."
+    },
+    "orden_compra": "4500339540",
+    "fecha_entrega": "14/12/2023",
+    "items": [
+      {
+        "descripcion": "STICKER SET x 2 4.5 CENTIMETROS OFFCORSS",
+        "codigo": "201889",
+        "cantidad": 1500,
+        "precio_unitario": 342.00,
+        "precio_total": 513000.00,
+        "fecha_entrega": "14/12/2023"
+      },
+      {
+        "descripcion": "STICKER CONJUNTO 4.5 CENTIMETROS OFFCORSS",
+        "codigo": "201895",
+        "cantidad": 2800,
+        "precio_unitario": 188.00,
+        "precio_total": 526400.00,
+        "fecha_entrega": "14/12/2023"
+      },
+      {
+        "descripcion": "STICKER PIJAMA 4.5 CENTIMETROS OFFCORSS",
+        "codigo": "201894",
+        "cantidad": 1000,
+        "precio_unitario": 342.00,
+        "precio_total": 342000.00,
+        "fecha_entrega": "14/12/2023"
+      }
+    ],
+    "reasoning": "La información fue extraída de la orden de compra proporcionada, incluyendo el NIT precedido por 'CN', la razón social del comprador, y los detalles de cada ítem como el código, descripción, cantidad, precio unitario y total, y fecha de entrega. El formato JSON se estructuró siguiendo los requerimientos específicos dados, incluyendo el uso correcto de separadores de decimales y miles según las convenciones locales."
+  }

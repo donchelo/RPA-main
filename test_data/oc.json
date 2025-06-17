@@ -1,0 +1,18 @@
+{
+    "comprador": {
+      "nit": "CN890900608"
+    },
+    "orden_compra": "4601325629",
+    "fecha_entrega": "05/12/2023",
+    "items": [
+      { 
+        "descripcion": "CAJA PONQUE ABUELA PEQUEÑA X 900GR",
+        "codigo": "4004233",
+        "cantidad": 200,
+        "precio_unitario": 3878.00,
+        "precio_total": 775600.00,
+        "fecha_entrega": "05/12/2023"
+      }
+    ],
+    "reasoning": "Esta estructura JSON representa la orden de compra emitida por Almacenes Exito S.A. a TAMAPRINT S.A.S. para la compra de 200 unidades de Caja Ponque Abuela Pequeña de 900gr cada una, con un precio unitario de 3878.00 pesos colombianos y un precio total de 775600.00 pesos colombianos. La fecha de entrega prevista es el 5 de diciembre de 2023."
+  }
