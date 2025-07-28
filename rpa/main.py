@@ -94,12 +94,14 @@ class RPA:
             pyautogui.moveTo(x, y, duration=0.5)
             logger.info(f'loaded item {item["codigo"]}, {item["cantidad"]}, {item["fecha_entrega"]}, {item["precio_unitario"]} for sales order with RPA')
 
-    def take_screenshot(self, filename):
-        self.get_remote_desktop()
+    def take_order_inserted_screenshot(self, filename):
+        if not os.path.exists('./rpa/vision/reference_images/inserted_orders'):
+            os.makedirs('./rpa/vision/reference_images/inserted_orders')
+        saved_filename = f'./rpa/vision/reference_images/inserted_orders/{filename}'
         time.sleep(1)
         screenshot = pyautogui.screenshot()
-        screenshot.save(filename)
-        logger.info(f'Screenshot taken and saved as {filename}')
+        screenshot.save(saved_filename)
+        logger.info(f'Screenshot taken and saved in {saved_filename}')
 
     def data_loader(self, data):
         nit = data["comprador"]['nit']
@@ -111,7 +113,7 @@ class RPA:
         self.load_orden_compra(orden_compra)
         self.load_fecha_entrega(fecha_entrega)
         self.load_items(items)
-        self.take_screenshot(f"./rpa/vision/reference_images/{data['orden_compra']}.png")
+        self.take_order_inserted_screenshot(f"{data['orden_compra']}.png")
         logger.info('loaded data successfully with RPA. Waiting for next run')
 
     def cancel_order(self):
