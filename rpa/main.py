@@ -153,7 +153,7 @@ class RPA:
         time.sleep(1)
         screenshot = pyautogui.screenshot()
         screenshot.save(saved_filename)
-        logger.info(f'Screenshot taken and saved in {saved_filename}')
+        rpa_logger.info(f'Screenshot taken and saved in {saved_filename}')
 
     def data_loader(self, data):
         nit = data["comprador"]['nit']
@@ -166,7 +166,7 @@ class RPA:
         self.load_fecha_entrega(fecha_entrega)
         self.load_items(items)
         self.take_order_inserted_screenshot(f"{data['orden_compra']}.png")
-        logger.info('loaded data successfully with RPA. Waiting for next run')
+        rpa_logger.info('loaded data successfully with RPA. Waiting for next run')
 
     def cancel_order(self):
         self.get_remote_desktop()
@@ -175,7 +175,7 @@ class RPA:
         time.sleep(1)
         pyautogui.click()
         time.sleep(1)
-        logger.info('Order cancelled.')
+        rpa_logger.info('Order cancelled.')
 
     def open_sap(self):
         try:
@@ -185,12 +185,12 @@ class RPA:
             coordinates = vision.get_sap_coordinates()
             print(coordinates)
             if not coordinates:
-                logger.error('No se pudieron obtener las coordenadas de SAP')
+                rpa_logger.error('No se pudieron obtener las coordenadas de SAP')
                 return False
                 
             # Verificamos que las coordenadas sean válidas
             if not isinstance(coordinates, tuple) or len(coordinates) != 2:
-                logger.error(f'Coordenadas inválidas de SAP: {coordinates}')
+                rpa_logger.error(f'Coordenadas inválidas de SAP: {coordinates}')
                 return False
                 
             pyautogui.moveTo(coordinates, duration=0.5)
@@ -205,24 +205,24 @@ class RPA:
                 # Verificamos si podemos tomar una captura de pantalla
                 screenshot = pyautogui.screenshot("./rpa/vision/reference_images/sap_desktop.png")
                 if screenshot:
-                    logger.info('SAP opened successfully.')
+                    rpa_logger.info('SAP opened successfully.')
                     return True
                 else:
-                    logger.error('No se pudo tomar captura de pantalla de SAP')
+                    rpa_logger.error('No se pudo tomar captura de pantalla de SAP')
                     return False
             except Exception as e:
-                logger.error(f'Error al interactuar con SAP: {str(e)}')
+                rpa_logger.error(f'Error al interactuar con SAP: {str(e)}')
                 return False
                 
         except Exception as e:
-            logger.error(f'Error opening SAP: {str(e)}')
+            rpa_logger.error(f'Error opening SAP: {str(e)}')
             return False
 
     def close_sap(self):
         self.get_remote_desktop()
         archivo_menu_coordinates = vision.get_archivos_menu_coordinates()
         if archivo_menu_coordinates is None:
-            logger.info('SAP already closed. Waiting for next run')
+            rpa_logger.info('SAP already closed. Waiting for next run')
             return
         pyautogui.moveTo(archivo_menu_coordinates, duration=0.5)
         time.sleep(1)
@@ -237,7 +237,7 @@ class RPA:
         time.sleep(1)
         pyautogui.hotkey('enter')
         time.sleep(15)
-        logger.info('SAP closed.')
+        rpa_logger.info('SAP closed.')
 
     def open_sap_orden_de_ventas(self):
         start_time = time.time()
