@@ -251,39 +251,49 @@ class RPA:
         
         try:
             # 1. Abrir módulos con Alt + M
-            rpa_logger.log_action("Abriendo menú módulos", "Atajo: Alt + M")
+            rpa_logger.log_action("PASO 4.1: Abriendo menú módulos", "Atajo: Alt + M")
             pyautogui.hotkey('alt', 'm')
             time.sleep(2)
+            rpa_logger.log_action("PASO 4.1 COMPLETADO: Menú módulos abierto", "Esperando 2 segundos")
             
             # 2. Seleccionar Ventas con tecla 'V'
-            rpa_logger.log_action("Seleccionando módulo Ventas", "Tecla: V")
+            rpa_logger.log_action("PASO 4.2: Seleccionando módulo Ventas", "Tecla: V")
             pyautogui.press('v')
             time.sleep(2)
+            rpa_logger.log_action("PASO 4.2 COMPLETADO: Módulo Ventas seleccionado", "Esperando 2 segundos")
             
             # 3. Buscar y hacer clic en el botón de Orden de Ventas usando la imagen de referencia
-            rpa_logger.log_action("Buscando botón de Orden de Ventas", "Usando imagen de referencia")
+            rpa_logger.log_action("PASO 4.3: Buscando botón de Orden de Ventas", "Usando imagen de referencia: sap_ventas_order_button.png")
             orden_ventas_coordinates = vision.get_ventas_order_button_coordinates()
             
             if orden_ventas_coordinates is None:
-                rpa_logger.log_error('No se pudo encontrar el botón de Orden de Ventas', 'Imagen no encontrada')
+                rpa_logger.log_error('PASO 4.3 FALLIDO: No se pudo encontrar el botón de Orden de Ventas', 'Imagen no encontrada en pantalla')
                 return False
                 
-            rpa_logger.log_action("Botón de Orden de Ventas encontrado", f"Coordenadas: {orden_ventas_coordinates}")
+            rpa_logger.log_action("PASO 4.3 COMPLETADO: Botón de Orden de Ventas encontrado", f"Coordenadas: {orden_ventas_coordinates}")
+            
+            # 4. Hacer clic en el botón
+            rpa_logger.log_action("PASO 4.4: Moviendo cursor al botón de Orden de Ventas", f"Coordenadas: {orden_ventas_coordinates}")
             pyautogui.moveTo(orden_ventas_coordinates, duration=0.5)
             time.sleep(1)
+            
+            rpa_logger.log_action("PASO 4.5: Haciendo clic en botón de Orden de Ventas", "Clic ejecutado")
             pyautogui.click()
             time.sleep(3)
+            rpa_logger.log_action("PASO 4.5 COMPLETADO: Clic ejecutado exitosamente", "Esperando 3 segundos para carga")
             
-            # Capturar pantalla para verificar que se abrió correctamente
+            # 5. Capturar pantalla para verificar que se abrió correctamente
+            rpa_logger.log_action("PASO 4.6: Capturando pantalla de verificación", "Guardando: sap_orden_de_ventas_template.png")
             pyautogui.screenshot("./rpa/vision/reference_images/sap_orden_de_ventas_template.png")
+            rpa_logger.log_action("PASO 4.6 COMPLETADO: Captura de pantalla guardada", "Verificación completada")
             
             duration = time.time() - start_time
-            rpa_logger.log_performance("Apertura de SAP orden de ventas", duration)
-            rpa_logger.log_action("SAP orden de ventas abierto exitosamente", "Módulo de ventas activo")
+            rpa_logger.log_performance("PASO 4 COMPLETADO: Apertura de SAP orden de ventas", duration)
+            rpa_logger.log_action("PASO 4 EXITOSO: SAP orden de ventas abierto exitosamente", "Módulo de ventas activo y listo para carga de datos")
             return True
             
         except Exception as e:
-            rpa_logger.log_error(f"Error al abrir SAP orden de ventas: {str(e)}", "Error en navegación")
+            rpa_logger.log_error(f"PASO 4 FALLIDO: Error al abrir SAP orden de ventas: {str(e)}", "Error en navegación")
             return False
 
     def get_remote_desktop(self):
