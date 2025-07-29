@@ -1,5 +1,13 @@
 import cv2
 import logging
+import pytesseract
+import easyocr
+import numpy as np
+from PIL import Image
+import pyautogui
+
+# Configurar la ruta de Tesseract para Windows
+pytesseract.pytesseract.tesseract_cmd = r'C:\Program Files\Tesseract-OCR\tesseract.exe'
 
 # Create logger 
 logger = logging.getLogger(__name__)
@@ -124,18 +132,144 @@ class Vision:
             return None
     
     def get_sap_coordinates(self):
-        result_sap = cv2.matchTemplate(self.remote_desktop_image, self.sap_icon_image ,cv2.TM_CCOEFF_NORMED)
-        min_val_sap, max_val_sap, min_loc_sap, max_loc_sap = cv2.minMaxLoc(result_sap)
-        print(max_val_sap)
-        if max_val_sap > 0.9:
-            w_sap = self.sap_icon_image.shape[1]
-            h_sap = self.sap_icon_image.shape[0]
-            center_point_sap = (max_loc_sap[0] + w_sap//2, max_loc_sap[1] + h_sap//2)
-            logger.info('SAP icon found. Coordinates: ' + str(center_point_sap) + '. Confidence: ' + str(max_val_sap))
-            return center_point_sap
-        else:
-            logger.error('SAP icon not found. Confidence: ' + str(max_val_sap) + '. Waiting for next run.')
+        """
+        Busca el icono de SAP Business One usando template matching
+        Retorna las coordenadas del centro del icono encontrado
+        """
+        try:
+            # Tomar captura de pantalla actual para template matching
+            screenshot = pyautogui.screenshot()
+            screenshot_np = np.array(screenshot)
+            screenshot_cv = cv2.cvtColor(screenshot_np, cv2.COLOR_RGB2BGR)
+            
+            # Realizar template matching
+            result_sap = cv2.matchTemplate(screenshot_cv, self.sap_icon_image, cv2.TM_CCOEFF_NORMED)
+            min_val_sap, max_val_sap, min_loc_sap, max_loc_sap = cv2.minMaxLoc(result_sap)
+            
+            logger.info(f"Template matching del icono SAP - Confianza: {max_val_sap:.3f}")
+            
+            # Umbral de confianza más flexible (0.7 en lugar de 0.9)
+            if max_val_sap > 0.7:
+                w_sap = self.sap_icon_image.shape[1]
+                h_sap = self.sap_icon_image.shape[0]
+                center_point_sap = (max_loc_sap[0] + w_sap//2, max_loc_sap[1] + h_sap//2)
+                logger.info(f'Icono de SAP encontrado. Coordenadas: {center_point_sap}. Confianza: {max_val_sap:.3f}')
+                return center_point_sap
+            else:
+                logger.warning(f'Icono de SAP no encontrado. Confianza: {max_val_sap:.3f} (umbral: 0.7)')
+                return None
+                
+        except Exception as e:
+            logger.error(f"Error en template matching del icono SAP: {str(e)}")
             return None
+
+    def get_sap_text_coordinates(self):
+        """
+        Busca el texto 'SAP Business One' en la pantalla usando OCR
+        Retorna las coordenadas del centro del texto encontrado
+        """
+        try:
+            # Tomar captura de pantalla actual
+            screenshot = pyautogui.screenshot()
+            screenshot_np = np.array(screenshot)
+            screenshot_cv = cv2.cvtColor(screenshot_np, cv2.COLOR_RGB2BGR)
+            
+            # Convertir a escala de grises para mejor OCR
+            gray = cv2.cvtColor(screenshot_cv, cv2.COLOR_BGR2GRAY)
+            
+            # Usar EasyOCR para detectar texto
+            reader = easyocr.Reader(['en'], gpu=False)
+            results = reader.readtext(gray)
+            
+            # Lista de variaciones del texto SAP para buscar
+            target_texts = [
+                "SAP Business One",
+                "SAP BusinessOne", 
+                "SAP Business",
+                "SAP",
+                "Business One",
+                "BusinessOne"
+            ]
+            
+            logger.info(f"Buscando variaciones de SAP en la pantalla")
+            
+            for (bbox, text, confidence) in results:
+                # Normalizar el texto para comparación
+                normalized_text = text.strip().lower()
+                
+                logger.debug(f"Texto encontrado: '{text}' con confianza: {confidence:.2f}")
+                
+                # Verificar si el texto contiene alguna variación de SAP
+                for target_text in target_texts:
+                    target_normalized = target_text.lower()
+                    
+                    if target_normalized in normalized_text or normalized_text in target_normalized:
+                        # Calcular el centro del bounding box
+                        top_left = bbox[0]
+                        bottom_right = bbox[2]
+                        
+                        center_x = int((top_left[0] + bottom_right[0]) / 2)
+                        center_y = int((top_left[1] + bottom_right[1]) / 2)
+                        
+                        logger.info(f"SAP encontrado ('{target_text}') en coordenadas: ({center_x}, {center_y}) con confianza: {confidence:.2f}")
+                        return (center_x, center_y)
+            
+            # Si no se encuentra con EasyOCR, intentar con Tesseract
+            logger.info("EasyOCR no encontró el texto, intentando con Tesseract...")
+            
+            # Configurar Tesseract
+            custom_config = r'--oem 3 --psm 6'
+            tesseract_text = pytesseract.image_to_string(gray, config=custom_config)
+            
+            # Buscar el texto en el resultado de Tesseract
+            for target_text in target_texts:
+                if target_text.lower() in tesseract_text.lower():
+                    # Obtener las coordenadas del texto con Tesseract
+                    data = pytesseract.image_to_data(gray, config=custom_config, output_type=pytesseract.Output.DICT)
+                    
+                    for i, text in enumerate(data['text']):
+                        if target_text.lower() in text.lower():
+                            x = data['left'][i]
+                            y = data['top'][i]
+                            w = data['width'][i]
+                            h = data['height'][i]
+                            
+                            center_x = x + w // 2
+                            center_y = y + h // 2
+                            
+                            logger.info(f"SAP encontrado con Tesseract ('{target_text}') en coordenadas: ({center_x}, {center_y})")
+                            return (center_x, center_y)
+            
+            logger.error("No se pudo encontrar ninguna variación de SAP en la pantalla")
+            return None
+            
+        except Exception as e:
+            logger.error(f"Error al buscar texto SAP: {str(e)}")
+            return None
+
+    def get_sap_coordinates_robust(self):
+        """
+        Método robusto que combina búsqueda por imagen y por texto
+        Primero intenta con template matching del icono, si falla usa OCR como respaldo
+        """
+        logger.info("Iniciando búsqueda robusta del icono de SAP Business One")
+        
+        # Primero intentar con template matching del icono
+        image_coordinates = self.get_sap_coordinates()
+        if image_coordinates:
+            logger.info("Icono de SAP encontrado por template matching")
+            return image_coordinates
+        
+        # Si falla el template matching, intentar con OCR como respaldo
+        logger.info("Template matching falló, intentando con OCR...")
+        text_coordinates = self.get_sap_text_coordinates()
+        if text_coordinates:
+            logger.info("SAP encontrado por texto OCR")
+            return text_coordinates
+        
+        # Si ambos fallan
+        logger.error("No se pudo encontrar el icono de SAP Business One con ningún método")
+        return None
 
     def image_show(self, image):
         cv2.imshow('image', image)

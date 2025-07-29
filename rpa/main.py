@@ -181,18 +181,24 @@ class RPA:
         try:
             self.get_remote_desktop()
             time.sleep(2)  # Aumentamos el tiempo de espera inicial
+            rpa_logger.log_action("Iniciando apertura de SAP", "Búsqueda del icono de SAP Business One")
             print('opening sap')
-            coordinates = vision.get_sap_coordinates()
+            
+            # Usar el nuevo método de búsqueda robusta (icono + texto como respaldo)
+            coordinates = vision.get_sap_coordinates_robust()
             print(coordinates)
+            
             if not coordinates:
-                rpa_logger.error('No se pudieron obtener las coordenadas de SAP')
+                rpa_logger.log_error('No se pudo encontrar el icono de SAP Business One en la pantalla', 'Icono no encontrado')
                 return False
                 
             # Verificamos que las coordenadas sean válidas
             if not isinstance(coordinates, tuple) or len(coordinates) != 2:
-                rpa_logger.error(f'Coordenadas inválidas de SAP: {coordinates}')
+                rpa_logger.log_error(f'Coordenadas inválidas de SAP: {coordinates}', 'Formato de coordenadas incorrecto')
                 return False
                 
+            rpa_logger.log_action("Icono de SAP Business One encontrado", f"Coordenadas: {coordinates}")
+            
             pyautogui.moveTo(coordinates, duration=0.5)
             time.sleep(2)  # Aumentamos el tiempo de espera antes del doble clic
             pyautogui.doubleClick()
@@ -205,17 +211,17 @@ class RPA:
                 # Verificamos si podemos tomar una captura de pantalla
                 screenshot = pyautogui.screenshot("./rpa/vision/reference_images/sap_desktop.png")
                 if screenshot:
-                    rpa_logger.info('SAP opened successfully.')
+                    rpa_logger.log_action("SAP abierto exitosamente", "Aplicación iniciada correctamente")
                     return True
                 else:
-                    rpa_logger.error('No se pudo tomar captura de pantalla de SAP')
+                    rpa_logger.log_error('No se pudo tomar captura de pantalla de SAP', 'Error en captura de pantalla')
                     return False
             except Exception as e:
-                rpa_logger.error(f'Error al interactuar con SAP: {str(e)}')
+                rpa_logger.log_error(f'Error al interactuar con SAP: {str(e)}', 'Error en interacción con SAP')
                 return False
                 
         except Exception as e:
-            rpa_logger.error(f'Error opening SAP: {str(e)}')
+            rpa_logger.log_error(f'Error opening SAP: {str(e)}', 'Error general en apertura de SAP')
             return False
 
     def close_sap(self):
