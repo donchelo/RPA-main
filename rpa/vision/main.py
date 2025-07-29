@@ -131,6 +131,38 @@ class Vision:
             logger.error('Orden de ventas menu not found.')
             return None
     
+    def get_ventas_order_button_coordinates(self):
+        """
+        Busca el botón de Orden de Ventas en la pantalla actual usando template matching
+        Retorna las coordenadas del centro del botón encontrado
+        """
+        try:
+            # Tomar captura de pantalla actual para template matching
+            screenshot = pyautogui.screenshot()
+            screenshot_np = np.array(screenshot)
+            screenshot_cv = cv2.cvtColor(screenshot_np, cv2.COLOR_RGB2BGR)
+            
+            # Realizar template matching
+            result_ventas_order = cv2.matchTemplate(screenshot_cv, self.sap_ventas_order_button_image, cv2.TM_CCOEFF_NORMED)
+            min_val_ventas_order, max_val_ventas_order, min_loc_ventas_order, max_loc_ventas_order = cv2.minMaxLoc(result_ventas_order)
+            
+            logger.info(f"Template matching del botón Orden de Ventas - Confianza: {max_val_ventas_order:.3f}")
+            
+            # Umbral de confianza
+            if max_val_ventas_order > 0.8:
+                w_ventas_order = self.sap_ventas_order_button_image.shape[1]
+                h_ventas_order = self.sap_ventas_order_button_image.shape[0]
+                center_point_ventas_order = (max_loc_ventas_order[0] + w_ventas_order//2, max_loc_ventas_order[1] + h_ventas_order//2)
+                logger.info(f'Botón de Orden de Ventas encontrado. Coordenadas: {center_point_ventas_order}. Confianza: {max_val_ventas_order:.3f}')
+                return center_point_ventas_order
+            else:
+                logger.warning(f'Botón de Orden de Ventas no encontrado. Confianza: {max_val_ventas_order:.3f} (umbral: 0.8)')
+                return None
+                
+        except Exception as e:
+            logger.error(f"Error en template matching del botón Orden de Ventas: {str(e)}")
+            return None
+    
     def get_sap_coordinates(self):
         """
         Busca el icono de SAP Business One usando template matching

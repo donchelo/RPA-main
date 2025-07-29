@@ -247,42 +247,44 @@ class RPA:
 
     def open_sap_orden_de_ventas(self):
         start_time = time.time()
-        rpa_logger.log_action("Iniciando apertura de SAP orden de ventas", "Navegación a módulo de ventas")
+        rpa_logger.log_action("Iniciando apertura de SAP orden de ventas", "Navegación usando atajos de teclado")
         
         try:
-            modulos_menu_coordinates = vision.get_modulos_menu_coordinates()
-            pyautogui.moveTo(modulos_menu_coordinates, duration=0.5)
-            rpa_logger.debug(f"Coordenadas del menú módulos: {modulos_menu_coordinates}")
+            # 1. Abrir módulos con Alt + M
+            rpa_logger.log_action("Abriendo menú módulos", "Atajo: Alt + M")
+            pyautogui.hotkey('alt', 'm')
+            time.sleep(2)
+            
+            # 2. Seleccionar Ventas con tecla 'V'
+            rpa_logger.log_action("Seleccionando módulo Ventas", "Tecla: V")
+            pyautogui.press('v')
+            time.sleep(2)
+            
+            # 3. Buscar y hacer clic en el botón de Orden de Ventas usando la imagen de referencia
+            rpa_logger.log_action("Buscando botón de Orden de Ventas", "Usando imagen de referencia")
+            orden_ventas_coordinates = vision.get_ventas_order_button_coordinates()
+            
+            if orden_ventas_coordinates is None:
+                rpa_logger.log_error('No se pudo encontrar el botón de Orden de Ventas', 'Imagen no encontrada')
+                return False
+                
+            rpa_logger.log_action("Botón de Orden de Ventas encontrado", f"Coordenadas: {orden_ventas_coordinates}")
+            pyautogui.moveTo(orden_ventas_coordinates, duration=0.5)
             time.sleep(1)
             pyautogui.click()
-            time.sleep(1)
-            pyautogui.screenshot("./rpa/vision/reference_images/sap_modulos_menu.png")
+            time.sleep(3)
             
-            ventas_menu_coordinates = vision.get_ventas_menu_coordinates()
-            rpa_logger.debug(f"Coordenadas del menú ventas: {ventas_menu_coordinates}")
-            pyautogui.moveTo(ventas_menu_coordinates, duration=0.5)
-            time.sleep(1)
-            # pyautogui.click()
-            time.sleep(5)
-            pyautogui.screenshot("./rpa/vision/reference_images/sap_ventas_order_menu.png")
-            
-            orden_de_ventas_menu_coordinates = vision.get_orden_de_ventas_menu_coordinates()
-            if orden_de_ventas_menu_coordinates is None:
-                rpa_logger.log_error('No se pudo abrir SAP orden de ventas', 'Coordenadas no encontradas')
-                return
-            pyautogui.moveTo(orden_de_ventas_menu_coordinates, duration=0.1)
-            time.sleep(1)
-            pyautogui.click()
-            time.sleep(5)
+            # Capturar pantalla para verificar que se abrió correctamente
             pyautogui.screenshot("./rpa/vision/reference_images/sap_orden_de_ventas_template.png")
             
             duration = time.time() - start_time
             rpa_logger.log_performance("Apertura de SAP orden de ventas", duration)
             rpa_logger.log_action("SAP orden de ventas abierto exitosamente", "Módulo de ventas activo")
+            return True
             
         except Exception as e:
             rpa_logger.log_error(f"Error al abrir SAP orden de ventas: {str(e)}", "Error en navegación")
-            raise
+            return False
 
     def get_remote_desktop(self):
         max_retries = 3
@@ -363,7 +365,11 @@ class RPA:
                     
                     rpa_logger.log_action("Archivo JSON cargado exitosamente", f"Archivo: {file}")
                     
-                    self.open_sap_orden_de_ventas()
+                    # Abrir SAP orden de ventas y verificar que se abrió correctamente
+                    if not self.open_sap_orden_de_ventas():
+                        rpa_logger.log_error(f'No se pudo abrir SAP orden de ventas para el archivo {file}', 'Error en navegación')
+                        continue
+                    
                     self.data_loader(data)
                     time.sleep(1)
                     # self.cancel_order()
