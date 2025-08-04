@@ -81,6 +81,8 @@ Archivos JSON → RPA → SAP Business One → Archivos Procesados
 ### **PASO 2: CONEXIÓN AL ESCRITORIO REMOTO**
 - **Ventana objetivo**: "20.96.6.64 - Conexión a Escritorio remoto"
 - **Máximo intentos**: 3
+- **Activación**: Activar ventana si no está activa
+- **Maximización**: Alt+Space, X para maximizar
 - **Verificación**: Captura de pantalla para confirmar conexión
 
 ### **PASO 3: APERTURA DE SAP BUSINESS ONE**
@@ -118,7 +120,27 @@ Para cada artículo:
    - **Artículos 1-N-1**: 3 TABs (siguiente artículo)
    - **Artículo N (último)**: 1 TAB (fin de artículos)
 
-### **PASO 9: FINALIZACIÓN**
+### **PASO 9: SCROLL HACIA ABAJO**
+- **Función**: `scroll_to_bottom()`
+- **Acción**: Buscar barra de desplazamiento vertical
+- **Proceso**: 
+  1. Calcular posición de scrollbar (lado derecho)
+  2. Hacer clic en la barra de desplazamiento
+  3. Arrastrar hacia abajo durante 2 segundos
+  4. Esperar 2 segundos adicionales
+- **Logging**: Métricas de rendimiento del scroll
+
+### **PASO 9.5: CAPTURA DE TOTALES**
+- **Función**: `take_totals_screenshot()`
+- **Acción**: Tomar captura de pantalla de totales
+- **Proceso**:
+  1. Crear directorio si no existe
+  2. Generar nombre con sufijo '_totales'
+  3. Tomar screenshot completo
+  4. Guardar en carpeta de capturas
+- **Logging**: Confirmación de captura exitosa
+
+### **PASO 10: FINALIZACIÓN**
 - **Mover archivo**: JSON → carpeta Procesados
 - **Logging**: Confirmación de procesamiento exitoso
 

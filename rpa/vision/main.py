@@ -31,12 +31,13 @@ class Vision:
         self.sap_modulos_menu_button = cv2.imread('./rpa/vision/reference_images/sap_modulos_menu_button.png', cv2.IMREAD_COLOR)
         self.sap_modulos_menu_image = cv2.imread('./rpa/vision/reference_images/sap_modulos_menu.png', cv2.IMREAD_UNCHANGED)
         self.sap_ventas_menu_button_image = cv2.imread('./rpa/vision/reference_images/sap_ventas_menu_button.png', cv2.IMREAD_COLOR)
-        self.sap_ventas_order_menu_image = cv2.imread('./rpa/vision/reference_images/sap_ventas_order_menu.png', cv2.IMREAD_COLOR)
+        self.sap_ventas_order_menu_image = cv2.imread('./rpa/vision/reference_images/sap_ventas_order_menu.png', cv2.IMREAD_UNCHANGED)
         self.sap_ventas_order_button_image = cv2.imread('./rpa/vision/reference_images/sap_ventas_order_button.png', cv2.IMREAD_COLOR)
         self.sap_archivo_menu_button_image = cv2.imread('./rpa/vision/reference_images/sap_archivo_menu_button.png', cv2.IMREAD_COLOR)
         self.sap_archivos_menu_image = cv2.imread('./rpa/vision/reference_images/sap_archivo_menu.png', cv2.IMREAD_UNCHANGED)
         self.sap_finalizar_button_image = cv2.imread('./rpa/vision/reference_images/sap_finalizar_button.png', cv2.IMREAD_COLOR)
         self.sap_totales_section_image = cv2.imread('./rpa/vision/reference_images/sap_totales_section.png', cv2.IMREAD_COLOR)
+        self.scroll_to_bottom_image = cv2.imread('./rpa/vision/reference_images/scroll_to_bottom.png', cv2.IMREAD_COLOR)
 
     def get_client_coordinates(self):
         result_client = cv2.matchTemplate(self.sap_orden_de_ventas_template_image, self.client_field_image ,cv2.TM_CCOEFF_NORMED)
@@ -453,6 +454,40 @@ class Vision:
         # Si ambos fallan
         logger.error("No se pudo encontrar el icono de SAP Business One con ningún método")
         return None
+
+    def get_scrollbar_coordinates(self):
+        """
+        Busca la barra de desplazamiento (scroll) en la pantalla actual
+        Retorna las coordenadas del centro de la barra de desplazamiento
+        """
+        try:
+            logger.info("Iniciando búsqueda de la barra de desplazamiento")
+            
+            # Tomar captura de pantalla actual para template matching
+            screenshot = pyautogui.screenshot()
+            screenshot_np = np.array(screenshot)
+            screenshot_cv = cv2.cvtColor(screenshot_np, cv2.COLOR_RGB2BGR)
+            
+            # Realizar template matching con la imagen de referencia de la barra de desplazamiento
+            result_scrollbar = cv2.matchTemplate(screenshot_cv, self.scroll_to_bottom_image, cv2.TM_CCOEFF_NORMED)
+            min_val_scrollbar, max_val_scrollbar, min_loc_scrollbar, max_loc_scrollbar = cv2.minMaxLoc(result_scrollbar)
+            
+            logger.info(f"Template matching de la barra de desplazamiento - Confianza: {max_val_scrollbar:.3f}")
+            
+            # Umbral de confianza
+            if max_val_scrollbar > 0.8:
+                w_scrollbar = self.scroll_to_bottom_image.shape[1]
+                h_scrollbar = self.scroll_to_bottom_image.shape[0]
+                center_point_scrollbar = (max_loc_scrollbar[0] + w_scrollbar//2, max_loc_scrollbar[1] + h_scrollbar//2)
+                logger.info(f'Barra de desplazamiento encontrada. Coordenadas: {center_point_scrollbar}. Confianza: {max_val_scrollbar:.3f}')
+                return center_point_scrollbar
+            else:
+                logger.warning(f'Barra de desplazamiento no encontrada. Confianza: {max_val_scrollbar:.3f} (umbral: 0.8)')
+                return None
+                
+        except Exception as e:
+            logger.error(f"Error en búsqueda de la barra de desplazamiento: {str(e)}")
+            return None
 
     def image_show(self, image):
         cv2.imshow('image', image)

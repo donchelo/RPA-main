@@ -23,8 +23,8 @@ class RPA:
         
         try:
             time.sleep(1)
-            self.get_remote_desktop()
-            time.sleep(1)
+            # CORRECCIÓN: Removido get_remote_desktop() para evitar la "x" de maximización
+            # La conexión al escritorio remoto ya se hace en el flujo principal
             pyautogui.screenshot("./rpa/vision/reference_images/template.png")
             vision.save_template()
             # CORRECCIÓN: Solo usar tabs, no mover mouse ni hacer clic
@@ -160,6 +160,86 @@ class RPA:
             rpa_logger.log_error(f"Error en carga de items: {str(e)}", f"Total items: {len(items)}")
             raise
 
+    def scroll_to_bottom(self):
+        """Baja el scroll hasta el final de la página"""
+        start_time = time.time()
+        rpa_logger.log_action("Iniciando scroll hacia abajo", "Buscando barra de desplazamiento vertical")
+        
+        try:
+            # Importar el módulo de visión
+            from rpa.vision import main as vision
+            
+            # Buscar la barra de desplazamiento usando la imagen de referencia
+            rpa_logger.log_action("Buscando barra de desplazamiento", "Usando imagen de referencia: scroll_to_bottom.png")
+            coordinates = vision.get_scrollbar_coordinates()
+            
+            if not coordinates:
+                rpa_logger.log_error('No se pudo encontrar la barra de desplazamiento en la pantalla', 'Imagen de referencia no encontrada')
+                return False
+                
+            # Verificar que las coordenadas sean válidas
+            if not isinstance(coordinates, tuple) or len(coordinates) != 2:
+                rpa_logger.log_error(f'Coordenadas inválidas de scrollbar: {coordinates}', 'Formato de coordenadas incorrecto')
+                return False
+            
+            scrollbar_x, scrollbar_y = coordinates
+            rpa_logger.log_action("Barra de desplazamiento encontrada", f"Coordenadas: {coordinates}")
+            
+            # Hacer clic en la barra de desplazamiento
+            rpa_logger.log_action("Haciendo clic en barra de desplazamiento", f"Posición: {coordinates}")
+            pyautogui.click(scrollbar_x, scrollbar_y)
+            time.sleep(1)
+            
+            # Obtener dimensiones de pantalla para calcular distancia de scroll
+            screen_width, screen_height = pyautogui.size()
+            
+            # Arrastrar hacia abajo hasta el final
+            # Calcular la distancia para bajar completamente
+            scroll_distance = screen_height - 100  # Dejar un margen de 100 píxeles
+            
+            rpa_logger.log_action("Arrastrando scroll hacia abajo", f"Distancia: {scroll_distance} píxeles")
+            pyautogui.drag(0, scroll_distance, duration=2)  # Arrastrar hacia abajo durante 2 segundos
+            
+            time.sleep(2)  # Esperar a que se complete el scroll
+            
+            duration = time.time() - start_time
+            rpa_logger.log_performance("Scroll hacia abajo completado", duration)
+            rpa_logger.log_action("Scroll hacia abajo completado exitosamente", "Página desplazada al final")
+            
+            return True
+            
+        except Exception as e:
+            rpa_logger.log_error(f"Error al hacer scroll hacia abajo: {str(e)}", "Error en scroll")
+            raise
+
+    def take_totals_screenshot(self, filename):
+        """Toma una captura de pantalla de la sección de totales"""
+        start_time = time.time()
+        rpa_logger.log_action("Iniciando captura de totales", f"Archivo: {filename}")
+        
+        try:
+            # Crear directorio si no existe
+            if not os.path.exists('./rpa/vision/reference_images/inserted_orders'):
+                os.makedirs('./rpa/vision/reference_images/inserted_orders')
+            
+            # Generar nombre del archivo para totales
+            base_name = filename.replace('.json', '')
+            totals_filename = f'{base_name}_totales.png'
+            saved_filename = f'./rpa/vision/reference_images/inserted_orders/{totals_filename}'
+            
+            # Tomar screenshot
+            time.sleep(1)  # Esperar a que la página se estabilice
+            screenshot = pyautogui.screenshot()
+            screenshot.save(saved_filename)
+            
+            duration = time.time() - start_time
+            rpa_logger.log_performance("Captura de totales completada", duration)
+            rpa_logger.log_action("Captura de totales guardada exitosamente", f"Archivo: {totals_filename}")
+            
+        except Exception as e:
+            rpa_logger.log_error(f"Error al tomar captura de totales: {str(e)}", f"Archivo: {filename}")
+            raise
+
     def move_json_to_processed(self, filename):
         """Mueve el archivo JSON procesado a la carpeta de procesados"""
         start_time = time.time()
@@ -215,6 +295,14 @@ class RPA:
         self.load_orden_compra(orden_compra)
         self.load_fecha_entrega(fecha_entrega)
         self.load_items(items)
+        
+        # PASO 9: Scroll hacia abajo después del último artículo
+        rpa_logger.log_action("PASO 9: Iniciando scroll hacia abajo", "Después del último artículo")
+        self.scroll_to_bottom()
+        
+        # PASO 9.5: Tomar captura de pantalla de totales
+        rpa_logger.log_action("PASO 9.5: Capturando totales", "Después del scroll")
+        self.take_totals_screenshot(filename)
         
         # PASO 10: Mover archivo JSON a procesados
         if self.move_json_to_processed(filename):
@@ -306,13 +394,27 @@ class RPA:
         rpa_logger.log_action("Iniciando apertura de SAP orden de ventas", "Navegación usando atajos de teclado")
         
         try:
-            # 1. Abrir módulos con Alt + M
+            # Asegurar que la ventana esté activa antes de enviar comandos
+            rpa_logger.log_action("PASO 4.0: Asegurando que la ventana esté activa", "Verificación de foco")
+            windows = pyautogui.getWindowsWithTitle(self.remote_desktop_window)
+            if windows:
+                window = windows[0]
+                if not window.isActive:
+                    window.activate()
+                    time.sleep(2)
+                    rpa_logger.log_action("PASO 4.0 COMPLETADO: Ventana activada", "Esperando 2 segundos")
+            
+            # 1. Abrir módulos con Alt + M (método mejorado)
             rpa_logger.log_action("PASO 4.1: Abriendo menú módulos", "Atajo: Alt + M")
-            pyautogui.hotkey('alt', 'm')
+            pyautogui.keyDown('alt')
+            time.sleep(0.1)
+            pyautogui.press('m')
+            time.sleep(0.1)
+            pyautogui.keyUp('alt')
             time.sleep(2)
             rpa_logger.log_action("PASO 4.1 COMPLETADO: Menú módulos abierto", "Esperando 2 segundos")
             
-            # 2. Seleccionar Ventas con tecla 'V'
+            # 2. Seleccionar Ventas con tecla 'V' (método mejorado)
             rpa_logger.log_action("PASO 4.2: Seleccionando módulo Ventas", "Tecla: V")
             pyautogui.press('v')
             time.sleep(2)
@@ -378,9 +480,26 @@ class RPA:
                 
                 # Verificamos que la ventana esté realmente activa
                 if window.isActive:
+                    # PASO ADICIONAL: Maximizar la ventana del escritorio remoto
+                    rpa_logger.log_action("Maximizando ventana del escritorio remoto", "Alt+Space, X")
+                    try:
+                        # Alt+Space para abrir el menú de la ventana
+                        pyautogui.hotkey('alt', 'space')
+                        time.sleep(0.5)
+                        
+                        # X para maximizar
+                        pyautogui.typewrite('x')
+                        time.sleep(1)
+                        
+                        rpa_logger.log_action("Ventana del escritorio remoto maximizada", "Comando de maximización ejecutado")
+                        
+                    except Exception as maximize_error:
+                        rpa_logger.log_error(f'Error al maximizar la ventana: {str(maximize_error)}', 'Error en maximización')
+                        # Continuamos aunque falle la maximización
+                    
                     screenshot = pyautogui.screenshot("./rpa/vision/reference_images/remote_desktop.png")
                     if screenshot:
-                        rpa_logger.log_action("Conexión al escritorio remoto establecida correctamente", "Ventana activa y captura exitosa")
+                        rpa_logger.log_action("Conexión al escritorio remoto establecida correctamente", "Ventana activa, maximizada y captura exitosa")
                         return window
                     else:
                         rpa_logger.log_error('No se pudo tomar captura de pantalla del escritorio remoto', 'Error en captura')
@@ -440,7 +559,14 @@ class RPA:
                     
                     rpa_logger.log_action("Archivo JSON cargado exitosamente", f"Archivo: {file}")
                     
-                    # Abrir SAP orden de ventas y verificar que se abrió correctamente
+                    # PASO 1: Conectar al escritorio remoto y maximizar ventana
+                    rpa_logger.log_action("PASO 1: Conectando al escritorio remoto", f"Archivo: {file}")
+                    if not self.get_remote_desktop():
+                        rpa_logger.log_error(f'No se pudo conectar al escritorio remoto para el archivo {file}', 'Error en conexión RDP')
+                        continue
+                    
+                    # PASO 2: Abrir SAP orden de ventas y verificar que se abrió correctamente
+                    rpa_logger.log_action("PASO 2: Abriendo SAP orden de ventas", f"Archivo: {file}")
                     if not self.open_sap_orden_de_ventas():
                         rpa_logger.log_error(f'No se pudo abrir SAP orden de ventas para el archivo {file}', 'Error en navegación')
                         continue
@@ -472,4 +598,6 @@ class RPA:
 
 if __name__ == "__main__":
     rpa = RPA()
-    rpa.close_sap()
+    # CORRECCIÓN: Removido close_sap() automático para evitar "x" extra
+    # close_sap() solo se debe ejecutar manualmente cuando sea necesario
+    # rpa.close_sap()  # Comentado para evitar "x" extra
