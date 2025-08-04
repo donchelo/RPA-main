@@ -39,7 +39,8 @@ def run_task():
     for i in range(max_retries):
         if rpa.open_sap():
             rpa.run()
-            rpa.close_sap()
+            # CORRECCIÓN: Removido close_sap() automático para evitar "x" extra
+            # rpa.close_sap()  # Comentado para evitar "x" extra después de procesar items
             break
         else:
             print(f"Failed to open SAP. Retrying... ({i+1}/{max_retries})")
