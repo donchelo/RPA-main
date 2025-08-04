@@ -151,6 +151,100 @@ class RPA:
             rpa_logger.log_error(f"Error en carga de items: {str(e)}", f"Total items: {len(items)}")
             raise
 
+    def scroll_to_bottom_right(self):
+        """Hace scroll vertical hasta abajo y a la derecha en SAP"""
+        start_time = time.time()
+        rpa_logger.log_action("Iniciando scroll vertical", "Hacia abajo y a la derecha")
+        
+        try:
+            # Obtener dimensiones de la pantalla
+            screen_width, screen_height = pyautogui.size()
+            
+            # Mover el cursor a la esquina inferior derecha
+            rpa_logger.log_action("PASO 8.1: Moviendo cursor a esquina inferior derecha", f"Coordenadas: ({screen_width-50}, {screen_height-50})")
+            pyautogui.moveTo(screen_width-50, screen_height-50, duration=0.5)
+            time.sleep(1)
+            
+            # Hacer scroll vertical hacia abajo usando la rueda del mouse
+            rpa_logger.log_action("PASO 8.2: Ejecutando scroll vertical hacia abajo", "Usando rueda del mouse")
+            for i in range(10):  # Hacer scroll 10 veces para asegurar que llegue abajo
+                pyautogui.scroll(-1000)  # Scroll hacia abajo (negativo)
+                time.sleep(0.5)
+            
+            # Mover a la derecha del todo
+            rpa_logger.log_action("PASO 8.3: Moviendo a la derecha del todo", f"Coordenadas: ({screen_width-10}, {screen_height-50})")
+            pyautogui.moveTo(screen_width-10, screen_height-50, duration=0.5)
+            time.sleep(1)
+            
+            duration = time.time() - start_time
+            rpa_logger.log_performance("Scroll vertical completado", duration)
+            rpa_logger.log_action("Scroll vertical completado exitosamente", "Posición final: abajo y a la derecha")
+            
+        except Exception as e:
+            rpa_logger.log_error(f"Error en scroll vertical: {str(e)}", "Error en navegación")
+            raise
+
+    def take_final_screenshot(self, filename):
+        """Toma screenshot final después del scroll"""
+        start_time = time.time()
+        rpa_logger.log_action("Iniciando captura de screenshot final", f"Archivo: {filename}")
+        
+        try:
+            # Crear directorio si no existe
+            if not os.path.exists('./rpa/vision/reference_images/inserted_orders'):
+                os.makedirs('./rpa/vision/reference_images/inserted_orders')
+            
+            saved_filename = f'./rpa/vision/reference_images/inserted_orders/{filename}'
+            time.sleep(2)  # Esperar a que la pantalla se estabilice después del scroll
+            
+            rpa_logger.log_action("PASO 8.4: Capturando screenshot final", f"Guardando en: {saved_filename}")
+            screenshot = pyautogui.screenshot()
+            screenshot.save(saved_filename)
+            
+            duration = time.time() - start_time
+            rpa_logger.log_performance("Screenshot final completado", duration)
+            rpa_logger.log_action("Screenshot final guardado exitosamente", f"Archivo: {saved_filename}")
+            
+        except Exception as e:
+            rpa_logger.log_error(f"Error al tomar screenshot final: {str(e)}", f"Archivo: {filename}")
+            raise
+
+    def move_json_to_processed(self, filename):
+        """Mueve el archivo JSON procesado a la carpeta de procesados"""
+        start_time = time.time()
+        rpa_logger.log_action("Iniciando movimiento de archivo procesado", f"Archivo: {filename}")
+        
+        try:
+            import shutil
+            
+            # Definir rutas
+            source_path = f'./data/outputs_json/{filename}'
+            processed_dir = './data/outputs_json/Procesados'
+            destination_path = f'{processed_dir}/{filename}'
+            
+            # Crear directorio de procesados si no existe
+            if not os.path.exists(processed_dir):
+                os.makedirs(processed_dir)
+                rpa_logger.log_action("PASO 8.5: Directorio de procesados creado", f"Ruta: {processed_dir}")
+            
+            # Verificar que el archivo fuente existe
+            if not os.path.exists(source_path):
+                rpa_logger.log_error(f"Archivo fuente no encontrado: {source_path}", f"Archivo: {filename}")
+                return False
+            
+            # Mover el archivo
+            rpa_logger.log_action("PASO 8.6: Moviendo archivo a procesados", f"De: {source_path} a: {destination_path}")
+            shutil.move(source_path, destination_path)
+            
+            duration = time.time() - start_time
+            rpa_logger.log_performance("Archivo movido a procesados", duration)
+            rpa_logger.log_action("Archivo movido exitosamente a procesados", f"Archivo: {filename}")
+            return True
+            
+        except Exception as e:
+            rpa_logger.log_error(f"Error al mover archivo procesado: {str(e)}", f"Archivo: {filename}")
+            return False
+
     def take_order_inserted_screenshot(self, filename):
         if not os.path.exists('./rpa/vision/reference_images/inserted_orders'):
             os.makedirs('./rpa/vision/reference_images/inserted_orders')
@@ -160,7 +254,7 @@ class RPA:
         screenshot.save(saved_filename)
         rpa_logger.info(f'Screenshot taken and saved in {saved_filename}')
 
-    def data_loader(self, data):
+    def data_loader(self, data, filename):
         nit = data["comprador"]['nit']
         orden_compra = data['orden_compra']
         fecha_entrega = data['fecha_entrega']
@@ -170,7 +264,22 @@ class RPA:
         self.load_orden_compra(orden_compra)
         self.load_fecha_entrega(fecha_entrega)
         self.load_items(items)
-        self.take_order_inserted_screenshot(f"{data['orden_compra']}.png")
+        
+        # NUEVOS PASOS DESPUÉS DE CARGAR ARTÍCULOS
+        rpa_logger.log_action("PASO 8: Iniciando pasos post-carga de artículos", "Scroll, screenshot y procesamiento")
+        
+        # PASO 8.1-8.3: Scroll vertical hasta abajo y a la derecha
+        self.scroll_to_bottom_right()
+        
+        # PASO 8.4: Tomar screenshot final
+        self.take_final_screenshot(f"{data['orden_compra']}_final.png")
+        
+        # PASO 8.5-8.6: Mover archivo JSON a procesados
+        if self.move_json_to_processed(filename):
+            rpa_logger.log_action("PASO 8 COMPLETADO: Procesamiento post-carga exitoso", f"Orden: {orden_compra}")
+        else:
+            rpa_logger.log_error("PASO 8 FALLIDO: Error al mover archivo procesado", f"Archivo: {filename}")
+        
         rpa_logger.info('loaded data successfully with RPA. Waiting for next run')
 
     def cancel_order(self):
@@ -385,7 +494,7 @@ class RPA:
                         rpa_logger.log_error(f'No se pudo abrir SAP orden de ventas para el archivo {file}', 'Error en navegación')
                         continue
                     
-                    self.data_loader(data)
+                    self.data_loader(data, file)
                     time.sleep(1)
                     # self.cancel_order()
                     time.sleep(1)
