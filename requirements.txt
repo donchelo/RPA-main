@@ -40,3 +40,9 @@ typing_extensions==4.12.2
 urllib3==2.2.3
 pytesseract==0.3.10
 easyocr==1.7.0
+
+# Nuevas dependencias para sistema de logs mejorado
+psutil==5.9.8
+matplotlib==3.8.4
+sqlite3
+argparse
