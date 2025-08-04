@@ -3,11 +3,9 @@ import time
 import os
 import json
 from rpa.vision.main import Vision
-from json_parser.main import JsonParser
 from rpa.logger import rpa_logger
 
 vision = Vision()
-json_parser = JsonParser()
 
 class RPA:
     def __init__(self):
