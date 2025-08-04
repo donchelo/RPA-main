@@ -30,6 +30,7 @@ class RPA:
             # CORRECCIÓN: Solo usar tabs, no mover mouse ni hacer clic
             pyautogui.typewrite(nit, interval=0.2)
             time.sleep(1)
+            time.sleep(2)  # 2 segundos adicionales después de ingresar NIT
             pyautogui.hotkey('enter')
             time.sleep(1)
             # Navegar con 3 tabs después del NIT
@@ -434,7 +435,8 @@ class RPA:
             rpa_logger.log_action("PASO 4.5: Haciendo clic en botón de Orden de Ventas", "Clic ejecutado")
             pyautogui.click()
             time.sleep(3)
-            rpa_logger.log_action("PASO 4.5 COMPLETADO: Clic ejecutado exitosamente", "Esperando 3 segundos para carga")
+            time.sleep(2)  # 2 segundos adicionales después de orden de venta
+            rpa_logger.log_action("PASO 4.5 COMPLETADO: Clic ejecutado exitosamente", "Esperando 5 segundos para carga (3+2)")
             
             # 5. Capturar pantalla para verificar que se abrió correctamente
             rpa_logger.log_action("PASO 4.6: Capturando pantalla de verificación", "Guardando: sap_orden_de_ventas_template.png")
