@@ -107,35 +107,31 @@ class RPA:
         rpa_logger.log_action("Iniciando carga de items", f"Total items: {len(items)}")
         
         try:
-            # Obtener coordenadas del primer artículo para calcular posiciones
-            coordinates, row_height = vision.get_primer_articulo_coordinates()
-            x = coordinates[0]
-            y_initial = coordinates[1]
+            # CORRECCIÓN: Solo usar navegación por teclado, sin coordenadas de mouse
+            rpa_logger.log_action("Iniciando navegación por teclado", "Sin movimientos de mouse")
             
             for i, item in enumerate(items, 1):
                 item_start_time = time.time()
                 rpa_logger.log_action(f"Procesando item {i}/{len(items)}", f"Código: {item['codigo']}")
                 
                 try:
-                    # Si no es el primer artículo, mover el mouse a la fila correspondiente
-                    if i > 1:
-                        y = y_initial + ((i - 1) * row_height)  # Calcular posición de la fila actual
-                        pyautogui.moveTo(x, y, duration=0.5)
-                        time.sleep(1)
-                        pyautogui.click()
-                        time.sleep(2)
-                    
-                    # CORRECCIÓN: Flujo con teclado - código + TAB + TAB + cantidad + ENTER
+                    # CORRECCIÓN: Flujo con teclado - código + TAB + TAB + cantidad + TAB + TAB + TAB (para siguiente artículo)
                     pyautogui.typewrite(item['codigo'], interval=0.2)
                     time.sleep(3)
+                    time.sleep(1)  # Espera adicional después de ingresar el código
                     pyautogui.hotkey('tab')  # Primer TAB
-                    time.sleep(3)
+                    time.sleep(2)
                     pyautogui.hotkey('tab')  # Segundo TAB
-                    time.sleep(3)
+                    time.sleep(2)
                     pyautogui.typewrite(str(item['cantidad']), interval=0.2)  # Cantidad después de los 2 TABs
-                    time.sleep(3)
-                    pyautogui.hotkey('enter')  # ENTER después de la cantidad
-                    time.sleep(3)
+                    time.sleep(2)
+                    # CORRECCIÓN: 3 TABs después de la cantidad para pasar al siguiente artículo
+                    pyautogui.hotkey('tab')  # Primer TAB después de cantidad
+                    time.sleep(2)
+                    pyautogui.hotkey('tab')  # Segundo TAB después de cantidad
+                    time.sleep(2)
+                    pyautogui.hotkey('tab')  # Tercer TAB después de cantidad
+                    time.sleep(2)
                     
                     item_duration = time.time() - item_start_time
                     rpa_logger.log_performance(f"Item {i} procesado", item_duration)
