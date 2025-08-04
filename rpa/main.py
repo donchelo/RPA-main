@@ -296,19 +296,15 @@ class RPA:
         self.load_fecha_entrega(fecha_entrega)
         self.load_items(items)
         
-        # PASO 9: Scroll hacia abajo después del último artículo
-        rpa_logger.log_action("PASO 9: Iniciando scroll hacia abajo", "Después del último artículo")
-        self.scroll_to_bottom()
-        
-        # PASO 9.5: Tomar captura de pantalla de totales
-        rpa_logger.log_action("PASO 9.5: Capturando totales", "Después del scroll")
+        # PASO 7: Tomar captura de pantalla completa
+        rpa_logger.log_action("PASO 7: Capturando pantalla completa", "Después de procesar todos los artículos")
         self.take_totals_screenshot(filename)
         
-        # PASO 10: Mover archivo JSON a procesados
+        # PASO 8: Mover archivo JSON a procesados
         if self.move_json_to_processed(filename):
-            rpa_logger.log_action("PASO 10 COMPLETADO: Procesamiento exitoso", f"Orden: {orden_compra}")
+            rpa_logger.log_action("PASO 8 COMPLETADO: Procesamiento exitoso", f"Orden: {orden_compra}")
         else:
-            rpa_logger.log_error("PASO 10 FALLIDO: Error al mover archivo procesado", f"Archivo: {filename}")
+            rpa_logger.log_error("PASO 8 FALLIDO: Error al mover archivo procesado", f"Archivo: {filename}")
         
         rpa_logger.info('loaded data successfully with RPA. Waiting for next run')
 
