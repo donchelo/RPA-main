@@ -47,6 +47,7 @@ def run_task():
 
     logging.info('Finished sequence, waiting for next run in 10 minutes')
     print('Finished sequence, waiting for next run in 10 minutes')
+    print('Sistema RPA en espera - monitoreando nuevos archivos JSON...')
 
 run_task()  # Run once at startup, outside of the loop
 schedule.every(10).minutes.do(run_task)
@@ -54,6 +55,6 @@ schedule.every(10).minutes.do(run_task)
 while True:
     schedule.run_pending()
     time.sleep(5)  # Check for pending tasks every second
-    print('.', end='')
+    print('.', end='', flush=True)  # Indicador de que el sistema está activo
     time.sleep(5)  # Check for pending tasks every second
-    print('*', end='')
+    print('*', end='', flush=True)  # Indicador de que el sistema está activo

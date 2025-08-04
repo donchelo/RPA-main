@@ -36,6 +36,7 @@ class Vision:
         self.sap_archivo_menu_button_image = cv2.imread('./rpa/vision/reference_images/sap_archivo_menu_button.png', cv2.IMREAD_COLOR)
         self.sap_archivos_menu_image = cv2.imread('./rpa/vision/reference_images/sap_archivo_menu.png', cv2.IMREAD_UNCHANGED)
         self.sap_finalizar_button_image = cv2.imread('./rpa/vision/reference_images/sap_finalizar_button.png', cv2.IMREAD_COLOR)
+        self.sap_totales_section_image = cv2.imread('./rpa/vision/reference_images/sap_totales_section.png', cv2.IMREAD_COLOR)
 
     def get_client_coordinates(self):
         result_client = cv2.matchTemplate(self.sap_orden_de_ventas_template_image, self.client_field_image ,cv2.TM_CCOEFF_NORMED)
@@ -106,6 +107,151 @@ class Vision:
         h_finalizar_button = self.sap_finalizar_button_image.shape[0]
         center_point_finalizar_button = (max_loc_finalizar_button[0] + w_finalizar_button//2, max_loc_finalizar_button[1] + h_finalizar_button//2)
         return center_point_finalizar_button
+
+    def get_totales_section_coordinates(self):
+        """
+        Busca la sección de totales (Total antes del descuento, Descuento, etc.) en la pantalla
+        Retorna las coordenadas del área donde se encuentra esta sección
+        """
+        try:
+            logger.info("ESTRATEGIA 3.1: Iniciando búsqueda de sección de totales")
+            
+            # Tomar captura de pantalla actual para template matching
+            logger.info("ESTRATEGIA 3.2: Capturando pantalla para buscar sección de totales")
+            screenshot = pyautogui.screenshot()
+            screenshot_np = np.array(screenshot)
+            screenshot_cv = cv2.cvtColor(screenshot_np, cv2.COLOR_RGB2BGR)
+            logger.info("ESTRATEGIA 3.2 COMPLETADO: Captura de pantalla procesada")
+            
+            # Realizar template matching con la imagen de referencia de totales
+            logger.info("ESTRATEGIA 3.3: Ejecutando template matching de sección de totales")
+            result_totales = cv2.matchTemplate(screenshot_cv, self.sap_totales_section_image, cv2.TM_CCOEFF_NORMED)
+            min_val_totales, max_val_totales, min_loc_totales, max_loc_totales = cv2.minMaxLoc(result_totales)
+            
+            logger.info(f"ESTRATEGIA 3.3 COMPLETADO: Template matching ejecutado - Confianza: {max_val_totales:.3f}")
+            
+            # Umbral de confianza más flexible para escritorio remoto
+            if max_val_totales > 0.5:  # Umbral más bajo para escritorio remoto
+                w_totales = self.sap_totales_section_image.shape[1]
+                h_totales = self.sap_totales_section_image.shape[0]
+                
+                # Calcular coordenadas del área de totales
+                top_left = max_loc_totales
+                bottom_right = (max_loc_totales[0] + w_totales, max_loc_totales[1] + h_totales)
+                center_point_totales = (max_loc_totales[0] + w_totales//2, max_loc_totales[1] + h_totales//2)
+                
+                logger.info(f'ESTRATEGIA 3 EXITOSA: Sección de totales encontrada. Coordenadas: {center_point_totales}. Confianza: {max_val_totales:.3f}')
+                logger.info(f'Área de totales: Top-left: {top_left}, Bottom-right: {bottom_right}')
+                
+                return {
+                    'center': center_point_totales,
+                    'top_left': top_left,
+                    'bottom_right': bottom_right,
+                    'width': w_totales,
+                    'height': h_totales,
+                    'confidence': max_val_totales
+                }
+            else:
+                logger.warning(f'ESTRATEGIA 3 FALLIDA: Sección de totales no encontrada. Confianza: {max_val_totales:.3f} (umbral: 0.5)')
+                
+                # ESTRATEGIA ALTERNATIVA: Buscar por texto usando OCR
+                logger.info("ESTRATEGIA 3.4: Intentando búsqueda por texto (OCR)")
+                if self.find_totales_by_text(screenshot_cv):
+                    logger.info("ESTRATEGIA 3.4 EXITOSA: Sección de totales encontrada por texto")
+                    return {
+                        'center': (screen_width//2, screen_height-100),
+                        'top_left': (0, screen_height-200),
+                        'bottom_right': (screen_width, screen_height),
+                        'width': screen_width,
+                        'height': 200,
+                        'confidence': 0.6
+                    }
+                else:
+                    logger.warning("ESTRATEGIA 3.4 FALLIDA: No se encontró sección de totales por texto")
+                    return None
+                
+        except Exception as e:
+            logger.error(f"ESTRATEGIA 3 ERROR: Error en template matching de sección de totales: {str(e)}")
+            return None
+
+    def find_totales_by_text(self, screenshot_cv):
+        """
+        Busca la sección de totales por texto usando OCR
+        """
+        try:
+            # Convertir a escala de grises para mejor OCR
+            gray = cv2.cvtColor(screenshot_cv, cv2.COLOR_BGR2GRAY)
+            
+            # Usar Tesseract para detectar texto
+            custom_config = r'--oem 3 --psm 6'
+            text = pytesseract.image_to_string(gray, config=custom_config)
+            
+            # Buscar palabras clave de totales
+            totales_keywords = [
+                "Total antes del descuento",
+                "Descuento",
+                "Gastos adicionales", 
+                "Redondeo",
+                "Impuesto",
+                "Total del documento",
+                "Total antes",
+                "Total documento"
+            ]
+            
+            text_lower = text.lower()
+            for keyword in totales_keywords:
+                if keyword.lower() in text_lower:
+                    logger.info(f"ESTRATEGIA 3.4: Palabra clave encontrada: {keyword}")
+                    return True
+            
+            return False
+            
+        except Exception as e:
+            logger.error(f"Error en búsqueda por texto: {str(e)}")
+            return False
+
+    def find_total_antes_descuento(self):
+        """
+        Busca específicamente "Total antes del descuento" en la parte inferior derecha
+        """
+        try:
+            logger.info("PASO 8.2: Buscando 'Total antes del descuento' en parte inferior derecha")
+            
+            # Tomar screenshot
+            screenshot = pyautogui.screenshot()
+            screenshot_np = np.array(screenshot)
+            screenshot_cv = cv2.cvtColor(screenshot_np, cv2.COLOR_RGB2BGR)
+            
+            # Obtener dimensiones de pantalla
+            screen_height, screen_width = screenshot_cv.shape[:2]
+            
+            # Recortar solo la parte inferior derecha (último 30% de ancho y alto)
+            right_bottom_x = int(screen_width * 0.7)  # Desde 70% del ancho
+            right_bottom_y = int(screen_height * 0.7)  # Desde 70% del alto
+            
+            # Recortar la región inferior derecha
+            right_bottom_region = screenshot_cv[right_bottom_y:, right_bottom_x:]
+            
+            # Convertir a escala de grises para OCR
+            gray_region = cv2.cvtColor(right_bottom_region, cv2.COLOR_BGR2GRAY)
+            
+            # Usar Tesseract para detectar texto en la región
+            custom_config = r'--oem 3 --psm 6'
+            text = pytesseract.image_to_string(gray_region, config=custom_config)
+            
+            logger.info(f"Texto encontrado en parte inferior derecha: {text}")
+            
+            # Buscar específicamente "Total antes del descuento"
+            if "total antes del descuento" in text.lower():
+                logger.info("PASO 8.2 EXITOSO: 'Total antes del descuento' encontrado")
+                return True
+            else:
+                logger.warning("PASO 8.2 FALLIDO: 'Total antes del descuento' no encontrado en parte inferior derecha")
+                return False
+                
+        except Exception as e:
+            logger.error(f"Error buscando 'Total antes del descuento': {str(e)}")
+            return False
 
     def get_ventas_menu_coordinates(self):
         result_ventas_menu = cv2.matchTemplate(self.sap_modulos_menu_image, self.sap_ventas_menu_button_image ,cv2.TM_CCOEFF_NORMED)

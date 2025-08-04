@@ -115,7 +115,7 @@ class RPA:
                 rpa_logger.log_action(f"Procesando item {i}/{len(items)}", f"Código: {item['codigo']}")
                 
                 try:
-                    # CORRECCIÓN: Flujo con teclado - código + TAB + TAB + cantidad + TAB + TAB + TAB (para siguiente artículo)
+                    # CORRECCIÓN: Flujo con teclado - código + TAB + TAB + cantidad + TAB (para siguiente artículo)
                     pyautogui.typewrite(item['codigo'], interval=0.2)
                     time.sleep(3)
                     time.sleep(1)  # Espera adicional después de ingresar el código
@@ -125,13 +125,22 @@ class RPA:
                     time.sleep(2)
                     pyautogui.typewrite(str(item['cantidad']), interval=0.2)  # Cantidad después de los 2 TABs
                     time.sleep(2)
+                    
                     # CORRECCIÓN: 3 TABs después de la cantidad para pasar al siguiente artículo
-                    pyautogui.hotkey('tab')  # Primer TAB después de cantidad
-                    time.sleep(2)
-                    pyautogui.hotkey('tab')  # Segundo TAB después de cantidad
-                    time.sleep(2)
-                    pyautogui.hotkey('tab')  # Tercer TAB después de cantidad
-                    time.sleep(2)
+                    # Si es el último artículo, hacer solo 1 TAB para ir a totales
+                    if i < len(items):  # Si no es el último artículo
+                        pyautogui.hotkey('tab')  # Primer TAB después de cantidad
+                        time.sleep(2)
+                        pyautogui.hotkey('tab')  # Segundo TAB después de cantidad
+                        time.sleep(2)
+                        pyautogui.hotkey('tab')  # Tercer TAB después de cantidad
+                        time.sleep(2)
+                        rpa_logger.log_action(f"Item {i} - Navegando al siguiente artículo", f"Código: {item['codigo']}")
+                    else:
+                        # Último artículo: solo 1 TAB para ir a totales
+                        pyautogui.hotkey('tab')  # Solo 1 TAB después de cantidad
+                        time.sleep(2)
+                        rpa_logger.log_action(f"Item {i} - Último artículo completado, navegando a totales", f"Código: {item['codigo']}")
                     
                     item_duration = time.time() - item_start_time
                     rpa_logger.log_performance(f"Item {i} procesado", item_duration)
@@ -149,64 +158,6 @@ class RPA:
             
         except Exception as e:
             rpa_logger.log_error(f"Error en carga de items: {str(e)}", f"Total items: {len(items)}")
-            raise
-
-    def scroll_to_bottom_right(self):
-        """Hace scroll vertical hasta abajo y a la derecha en SAP"""
-        start_time = time.time()
-        rpa_logger.log_action("Iniciando scroll vertical", "Hacia abajo y a la derecha")
-        
-        try:
-            # Obtener dimensiones de la pantalla
-            screen_width, screen_height = pyautogui.size()
-            
-            # Mover el cursor a la esquina inferior derecha
-            rpa_logger.log_action("PASO 8.1: Moviendo cursor a esquina inferior derecha", f"Coordenadas: ({screen_width-50}, {screen_height-50})")
-            pyautogui.moveTo(screen_width-50, screen_height-50, duration=0.5)
-            time.sleep(1)
-            
-            # Hacer scroll vertical hacia abajo usando la rueda del mouse
-            rpa_logger.log_action("PASO 8.2: Ejecutando scroll vertical hacia abajo", "Usando rueda del mouse")
-            for i in range(10):  # Hacer scroll 10 veces para asegurar que llegue abajo
-                pyautogui.scroll(-1000)  # Scroll hacia abajo (negativo)
-                time.sleep(0.5)
-            
-            # Mover a la derecha del todo
-            rpa_logger.log_action("PASO 8.3: Moviendo a la derecha del todo", f"Coordenadas: ({screen_width-10}, {screen_height-50})")
-            pyautogui.moveTo(screen_width-10, screen_height-50, duration=0.5)
-            time.sleep(1)
-            
-            duration = time.time() - start_time
-            rpa_logger.log_performance("Scroll vertical completado", duration)
-            rpa_logger.log_action("Scroll vertical completado exitosamente", "Posición final: abajo y a la derecha")
-            
-        except Exception as e:
-            rpa_logger.log_error(f"Error en scroll vertical: {str(e)}", "Error en navegación")
-            raise
-
-    def take_final_screenshot(self, filename):
-        """Toma screenshot final después del scroll"""
-        start_time = time.time()
-        rpa_logger.log_action("Iniciando captura de screenshot final", f"Archivo: {filename}")
-        
-        try:
-            # Crear directorio si no existe
-            if not os.path.exists('./rpa/vision/reference_images/inserted_orders'):
-                os.makedirs('./rpa/vision/reference_images/inserted_orders')
-            
-            saved_filename = f'./rpa/vision/reference_images/inserted_orders/{filename}'
-            time.sleep(2)  # Esperar a que la pantalla se estabilice después del scroll
-            
-            rpa_logger.log_action("PASO 8.4: Capturando screenshot final", f"Guardando en: {saved_filename}")
-            screenshot = pyautogui.screenshot()
-            screenshot.save(saved_filename)
-            
-            duration = time.time() - start_time
-            rpa_logger.log_performance("Screenshot final completado", duration)
-            rpa_logger.log_action("Screenshot final guardado exitosamente", f"Archivo: {saved_filename}")
-            
-        except Exception as e:
-            rpa_logger.log_error(f"Error al tomar screenshot final: {str(e)}", f"Archivo: {filename}")
             raise
 
     def move_json_to_processed(self, filename):
@@ -265,20 +216,11 @@ class RPA:
         self.load_fecha_entrega(fecha_entrega)
         self.load_items(items)
         
-        # NUEVOS PASOS DESPUÉS DE CARGAR ARTÍCULOS
-        rpa_logger.log_action("PASO 8: Iniciando pasos post-carga de artículos", "Scroll, screenshot y procesamiento")
-        
-        # PASO 8.1-8.3: Scroll vertical hasta abajo y a la derecha
-        self.scroll_to_bottom_right()
-        
-        # PASO 8.4: Tomar screenshot final
-        self.take_final_screenshot(f"{data['orden_compra']}_final.png")
-        
-        # PASO 8.5-8.6: Mover archivo JSON a procesados
+        # PASO 10: Mover archivo JSON a procesados
         if self.move_json_to_processed(filename):
-            rpa_logger.log_action("PASO 8 COMPLETADO: Procesamiento post-carga exitoso", f"Orden: {orden_compra}")
+            rpa_logger.log_action("PASO 10 COMPLETADO: Procesamiento exitoso", f"Orden: {orden_compra}")
         else:
-            rpa_logger.log_error("PASO 8 FALLIDO: Error al mover archivo procesado", f"Archivo: {filename}")
+            rpa_logger.log_error("PASO 10 FALLIDO: Error al mover archivo procesado", f"Archivo: {filename}")
         
         rpa_logger.info('loaded data successfully with RPA. Waiting for next run')
 
@@ -472,12 +414,21 @@ class RPA:
         
         directory = './data/outputs_json'
         try:
-            files = [f for f in os.listdir(directory) if not f.startswith('.') and not f.endswith('.tmp')]
+            # Filtrar solo archivos JSON, excluyendo directorios y archivos temporales
+            files = [f for f in os.listdir(directory) 
+                    if os.path.isfile(os.path.join(directory, f))  # Solo archivos, no directorios
+                    and f.endswith('.json')  # Solo archivos JSON
+                    and not f.startswith('.')  # No archivos ocultos
+                    and not f.endswith('.tmp')]  # No archivos temporales
+            
             if len(files) == 0:
+                rpa_logger.log_action("No hay archivos JSON disponibles para procesar", f"Directorio: {directory}")
+                rpa_logger.log_action("Buscando archivos en directorio", f"Contenido: {os.listdir(directory)}")
                 rpa_logger.info('No hay archivos para procesar. Esperando próxima ejecución')
                 return
             
-            rpa_logger.log_action(f"Archivos encontrados para procesar", f"Total: {len(files)} archivos")
+            rpa_logger.log_action(f"Archivos JSON encontrados para procesar", f"Total: {len(files)} archivos")
+            rpa_logger.log_action("Lista de archivos encontrados", f"Archivos: {files}")
             
             for i, file in enumerate(files, 1):
                 file_start_time = time.time()
