@@ -3,7 +3,13 @@ import time
 import os
 import json
 from rpa.vision.main import Vision
-from rpa.logger import rpa_logger
+from rpa.simple_logger import rpa_logger
+from rpa.smart_waits import smart_waits, adaptive_wait, smart_sleep
+from rpa.config_manager import get_delay, get_navigation_tabs, get_retry_attempts
+from rpa.error_handler import (
+    error_handler, with_error_handling, ErrorType, ErrorSeverity,
+    handle_template_error, handle_window_error, handle_sap_error
+)
 
 vision = Vision()
 
@@ -15,29 +21,42 @@ class RPA:
         while True:
             print(pyautogui.position())
 
+    @with_error_handling(ErrorType.DATA_PROCESSING, ErrorSeverity.MEDIUM, operation="load_nit")
     def load_nit(self, nit):
         start_time = time.time()
         rpa_logger.log_action("Iniciando carga de NIT", f"NIT: {nit}")
         
+        # Validar NIT
+        if not nit or not str(nit).strip():
+            raise ValueError(f"NIT inválido: {nit}")
+        
         try:
-            time.sleep(1)
-            # CORRECCIÓN: Removido get_remote_desktop() para evitar la "x" de maximización
-            # La conexión al escritorio remoto ya se hace en el flujo principal
+            smart_sleep('short')
+            
+            # Capturar template actual
             pyautogui.screenshot("./rpa/vision/reference_images/template.png")
             vision.save_template()
-            # CORRECCIÓN: Solo usar tabs, no mover mouse ni hacer clic
-            pyautogui.typewrite(nit, interval=0.2)
-            time.sleep(1)
-            time.sleep(2)  # 2 segundos adicionales después de ingresar NIT
+            
+            # Limpiar campo antes de escribir (por si hay datos previos)
+            pyautogui.hotkey('ctrl', 'a')
+            smart_sleep('very_short')
+            
+            # Ingresar NIT con validación
+            nit_str = str(nit).strip()
+            pyautogui.typewrite(nit_str, interval=0.2)
+            smart_sleep('after_input')
+            smart_sleep('after_nit')  # Tiempo adicional para procesamiento
+            
+            # Confirmar entrada
             pyautogui.hotkey('enter')
-            time.sleep(1)
-            # Navegar con 3 tabs después del NIT
-            pyautogui.hotkey('tab')
-            time.sleep(0.5)
-            pyautogui.hotkey('tab')
-            time.sleep(0.5)
-            pyautogui.hotkey('tab')
-            time.sleep(0.5)
+            smart_sleep('after_input')
+            
+            # Navegar con tabs configurables
+            tabs_count = get_navigation_tabs('after_nit')
+            smart_waits.smart_tab_wait(tabs_count, "after_nit")
+            for i in range(tabs_count):
+                pyautogui.hotkey('tab')
+                smart_sleep('after_tab')
             
             duration = time.time() - start_time
             rpa_logger.log_performance("Carga de NIT", duration)
@@ -52,19 +71,16 @@ class RPA:
         rpa_logger.log_action("Iniciando carga de orden de compra", f"Orden: {orden_compra}")
         
         try:
-            time.sleep(1)
+            smart_sleep('short')
             # CORRECCIÓN: Solo usar tabs, no mover mouse ni hacer clic
             pyautogui.typewrite(orden_compra, interval=0.2)
-            time.sleep(1)
-            # Navegar con 4 tabs después de la orden de compra
-            pyautogui.hotkey('tab')
-            time.sleep(0.5)
-            pyautogui.hotkey('tab')
-            time.sleep(0.5)
-            pyautogui.hotkey('tab')
-            time.sleep(0.5)
-            pyautogui.hotkey('tab')
-            time.sleep(0.5)
+            smart_sleep('after_input')
+            # Navegar con tabs configurables después de la orden de compra
+            tabs_count = get_navigation_tabs('after_order')
+            smart_waits.smart_tab_wait(tabs_count, "orden_compra")
+            for i in range(tabs_count):
+                pyautogui.hotkey('tab')
+                smart_sleep('after_tab')
             
             duration = time.time() - start_time
             rpa_logger.log_performance("Carga de orden de compra", duration)
@@ -79,19 +95,16 @@ class RPA:
         rpa_logger.log_action("Iniciando carga de fecha de entrega", f"Fecha: {fecha_entrega}")
         
         try:
-            time.sleep(1)
-            # Ya estamos posicionados en el campo después de los 4 tabs desde orden de compra
+            smart_sleep('short')
+            # Ya estamos posicionados en el campo después de los tabs desde orden de compra
             pyautogui.typewrite(fecha_entrega, interval=0.2)
-            time.sleep(1)
-            # CORRECCIÓN: Hacer 4 TABS después de la fecha de entrega general (como describes)
-            pyautogui.hotkey('tab')
-            time.sleep(0.5)
-            pyautogui.hotkey('tab')
-            time.sleep(0.5)
-            pyautogui.hotkey('tab')
-            time.sleep(0.5)
-            pyautogui.hotkey('tab')
-            time.sleep(0.5)
+            smart_sleep('after_input')
+            # CORRECCIÓN: Usar tabs configurables después de la fecha de entrega
+            tabs_count = get_navigation_tabs('after_date')
+            smart_waits.smart_tab_wait(tabs_count, "fecha_entrega")
+            for i in range(tabs_count):
+                pyautogui.hotkey('tab')
+                smart_sleep('after_tab')
             
             duration = time.time() - start_time
             rpa_logger.log_performance("Carga de fecha de entrega", duration)
@@ -316,52 +329,56 @@ class RPA:
         time.sleep(1)
         rpa_logger.info('Order cancelled.')
 
+    @with_error_handling(ErrorType.SAP_NAVIGATION, ErrorSeverity.HIGH, operation="open_sap")
     def open_sap(self):
-        try:
-            self.get_remote_desktop()
-            time.sleep(2)  # Aumentamos el tiempo de espera inicial
-            rpa_logger.log_action("Iniciando apertura de SAP", "Búsqueda del icono de SAP Business One")
-            print('opening sap')
-            
-            # Usar el nuevo método de búsqueda robusta (icono + texto como respaldo)
-            coordinates = vision.get_sap_coordinates_robust()
-            print(coordinates)
-            
-            if not coordinates:
-                rpa_logger.log_error('No se pudo encontrar el icono de SAP Business One en la pantalla', 'Icono no encontrado')
-                return False
-                
-            # Verificamos que las coordenadas sean válidas
-            if not isinstance(coordinates, tuple) or len(coordinates) != 2:
-                rpa_logger.log_error(f'Coordenadas inválidas de SAP: {coordinates}', 'Formato de coordenadas incorrecto')
-                return False
-                
-            rpa_logger.log_action("Icono de SAP Business One encontrado", f"Coordenadas: {coordinates}")
-            
-            pyautogui.moveTo(coordinates, duration=0.5)
-            time.sleep(2)  # Aumentamos el tiempo de espera antes del doble clic
-            pyautogui.doubleClick()
-            time.sleep(10)  # Aumentamos el tiempo de espera después del doble clic
-            
-            # Verificamos si SAP está respondiendo
+        max_attempts = get_retry_attempts('sap_open')
+        
+        for attempt in range(max_attempts):
             try:
+                if not self.get_remote_desktop():
+                    raise Exception("No se pudo conectar al escritorio remoto")
+                
+                smart_sleep('navigation_wait')
+                rpa_logger.log_action("Iniciando apertura de SAP", f"Intento {attempt + 1}/{max_attempts}")
+                
+                # Usar el nuevo método de búsqueda robusta (icono + texto como respaldo)
+                coordinates = vision.get_sap_coordinates_robust()
+                
+                if not coordinates:
+                    raise Exception('No se pudo encontrar el icono de SAP Business One en la pantalla')
+                    
+                # Verificamos que las coordenadas sean válidas
+                if not isinstance(coordinates, tuple) or len(coordinates) != 2:
+                    raise Exception(f'Coordenadas inválidas de SAP: {coordinates}')
+                    
+                rpa_logger.log_action("Icono de SAP Business One encontrado", f"Coordenadas: {coordinates}")
+                
+                pyautogui.moveTo(coordinates, duration=0.5)
+                smart_sleep('medium')
+                pyautogui.doubleClick()
+                smart_sleep('sap_double_click')
+                
+                # Verificamos si SAP está respondiendo
                 pyautogui.hotkey('enter')
-                time.sleep(30)
+                smart_sleep('sap_startup')
+                
                 # Verificamos si podemos tomar una captura de pantalla
                 screenshot = pyautogui.screenshot("./rpa/vision/reference_images/sap_desktop.png")
                 if screenshot:
                     rpa_logger.log_action("SAP abierto exitosamente", "Aplicación iniciada correctamente")
                     return True
                 else:
-                    rpa_logger.log_error('No se pudo tomar captura de pantalla de SAP', 'Error en captura de pantalla')
-                    return False
+                    raise Exception('No se pudo tomar captura de pantalla de SAP')
+                    
             except Exception as e:
-                rpa_logger.log_error(f'Error al interactuar con SAP: {str(e)}', 'Error en interacción con SAP')
-                return False
-                
-        except Exception as e:
-            rpa_logger.log_error(f'Error opening SAP: {str(e)}', 'Error general en apertura de SAP')
-            return False
+                if attempt == max_attempts - 1:  # Último intento
+                    rpa_logger.log_error(f'Error opening SAP after {max_attempts} attempts: {str(e)}', 'Error crítico en apertura de SAP')
+                    return False
+                else:
+                    rpa_logger.warning(f'Error opening SAP (attempt {attempt + 1}): {str(e)}. Reintentando...')
+                    smart_sleep('retry_delay')
+        
+        return False
 
     def close_sap(self):
         self.get_remote_desktop()
@@ -450,9 +467,10 @@ class RPA:
             rpa_logger.log_error(f"PASO 4 FALLIDO: Error al abrir SAP orden de ventas: {str(e)}", "Error en navegación")
             return False
 
+    @with_error_handling(ErrorType.WINDOW_CONNECTION, ErrorSeverity.HIGH, operation="get_remote_desktop")
     def get_remote_desktop(self):
-        max_retries = 3
-        retry_delay = 5
+        max_retries = get_retry_attempts('remote_desktop')
+        retry_delay = get_delay('retry_delay') or 5.0
         
         rpa_logger.log_action("Iniciando conexión al escritorio remoto", f"Máximo {max_retries} intentos")
         
@@ -460,56 +478,48 @@ class RPA:
             try:
                 windows = pyautogui.getWindowsWithTitle(self.remote_desktop_window)
                 if not windows:
-                    rpa_logger.warning(f'Ventana de escritorio remoto no encontrada (intento {attempt + 1}/{max_retries})')
                     if attempt < max_retries - 1:
+                        rpa_logger.warning(f'Ventana no encontrada (intento {attempt + 1}/{max_retries}), abriendo escritorio remoto')
                         self.open_remote_desktop()
                         time.sleep(retry_delay)
                         continue
                     else:
-                        rpa_logger.log_error('No se pudo encontrar la ventana de escritorio remoto después de varios intentos', 'Ventana no encontrada')
-                        return None
+                        raise Exception('Ventana de escritorio remoto no encontrada después de varios intentos')
                 
                 window = windows[0]
                 if not window.isActive:
                     window.activate()
-                    time.sleep(2)  # Esperamos a que la ventana se active
+                    smart_sleep('window_activation')
                 
                 # Verificamos que la ventana esté realmente activa
-                if window.isActive:
-                    # PASO ADICIONAL: Maximizar la ventana del escritorio remoto
+                if not window.isActive:
+                    raise Exception('No se pudo activar la ventana del escritorio remoto')
+                
+                # Maximizar la ventana del escritorio remoto
+                try:
                     rpa_logger.log_action("Maximizando ventana del escritorio remoto", "Alt+Space, X")
-                    try:
-                        # Alt+Space para abrir el menú de la ventana
-                        pyautogui.hotkey('alt', 'space')
-                        time.sleep(0.5)
-                        
-                        # X para maximizar
-                        pyautogui.typewrite('x')
-                        time.sleep(1)
-                        
-                        rpa_logger.log_action("Ventana del escritorio remoto maximizada", "Comando de maximización ejecutado")
-                        
-                    except Exception as maximize_error:
-                        rpa_logger.log_error(f'Error al maximizar la ventana: {str(maximize_error)}', 'Error en maximización')
-                        # Continuamos aunque falle la maximización
-                    
-                    screenshot = pyautogui.screenshot("./rpa/vision/reference_images/remote_desktop.png")
-                    if screenshot:
-                        rpa_logger.log_action("Conexión al escritorio remoto establecida correctamente", "Ventana activa, maximizada y captura exitosa")
-                        return window
-                    else:
-                        rpa_logger.log_error('No se pudo tomar captura de pantalla del escritorio remoto', 'Error en captura')
-                else:
-                    rpa_logger.log_error('No se pudo activar la ventana del escritorio remoto', 'Ventana inactiva')
+                    pyautogui.hotkey('alt', 'space')
+                    smart_sleep('short')
+                    pyautogui.typewrite('x')
+                    smart_sleep('medium')
+                    rpa_logger.log_action("Ventana maximizada exitosamente", "Maximización completada")
+                except Exception as maximize_error:
+                    rpa_logger.warning(f'Error al maximizar ventana: {str(maximize_error)} (continuando)')
+                
+                # Verificar con captura de pantalla
+                screenshot = pyautogui.screenshot("./rpa/vision/reference_images/remote_desktop.png")
+                if not screenshot:
+                    raise Exception('No se pudo tomar captura de pantalla del escritorio remoto')
+                
+                rpa_logger.log_action("Conexión establecida exitosamente", "Ventana activa y maximizada")
+                return window
                 
             except Exception as e:
-                rpa_logger.log_error(f'Error al conectar con el escritorio remoto (intento {attempt + 1}/{max_retries}): {str(e)}', f"Intento {attempt + 1}")
-                if attempt < max_retries - 1:
-                    time.sleep(retry_delay)
-                    continue
+                if attempt == max_retries - 1:  # Último intento
+                    raise Exception(f'Error crítico en conexión RDP después de {max_retries} intentos: {str(e)}')
                 else:
-                    rpa_logger.log_error('No se pudo establecer conexión con el escritorio remoto después de varios intentos', 'Todos los intentos fallaron')
-                    return None
+                    rpa_logger.warning(f'Error en conexión RDP (intento {attempt + 1}): {str(e)}. Reintentando...')
+                    time.sleep(retry_delay)
         
         return None
 

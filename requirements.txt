@@ -31,3 +31,4 @@ charset-normalizer==3.4.0
 idna==3.10
 urllib3==2.2.3
 typing_extensions==4.12.2
+PyYAML==6.0.2

@@ -1,0 +1,123 @@
+# Configuración del Sistema RPA TAMAPRINT
+# Permite modificar comportamientos sin cambiar código
+
+# === CONFIGURACIÓN DE VENTANAS ===
+windows:
+  remote_desktop: "20.96.6.64 - Conexión a Escritorio remoto"
+  activation_timeout: 2.0
+  maximize_wait: 0.5
+
+# === TIEMPOS DE ESPERA (segundos) ===
+delays:
+  # Básicos
+  very_short: 0.1
+  short: 0.5  
+  medium: 1.0
+  long: 2.0
+  very_long: 3.0
+  
+  # Específicos para operaciones RPA
+  after_input: 1.0
+  after_click: 1.0
+  after_tab: 0.5
+  after_nit: 2.0
+  after_order: 1.0  
+  after_date: 1.0
+  after_item_code: 3.0
+  after_quantity: 2.0
+  
+  # Esperas para carga de sistemas
+  sap_startup: 30.0
+  sap_double_click: 10.0
+  screenshot_wait: 1.0
+  navigation_wait: 2.0
+  window_activation: 2.0
+
+# === RUTAS DE ARCHIVOS ===
+paths:
+  data_json: "./data/outputs_json"
+  processed_json: "./data/outputs_json/Procesados"
+  reference_images: "./rpa/vision/reference_images"
+  inserted_orders: "./rpa/vision/reference_images/inserted_orders"
+  template_image: "./rpa/vision/reference_images/template.png"
+  sap_desktop: "./rpa/vision/reference_images/sap_desktop.png"
+  remote_desktop: "./rpa/vision/reference_images/remote_desktop.png"
+  sap_order_template: "./rpa/vision/reference_images/sap_orden_de_ventas_template.png"
+
+# === CONFIGURACIÓN DE TEMPLATE MATCHING ===
+template_matching:
+  default_confidence: 0.8
+  low_confidence: 0.5
+  high_confidence: 0.9
+  sap_icon_confidence: 0.7
+  scrollbar_confidence: 0.8
+  timeout: 10.0  # segundos para esperar que aparezca un elemento
+
+# === CONFIGURACIÓN DE REINTENTOS ===
+retries:
+  max_sap_open_attempts: 3
+  max_remote_desktop_attempts: 3
+  retry_delay: 5
+  
+# === NAVEGACIÓN POR TECLADO ===
+navigation:
+  tabs_after_nit: 3
+  tabs_after_order: 4
+  tabs_after_date: 4
+  tabs_before_quantity: 2
+  tabs_after_quantity_next_item: 3
+  tabs_after_last_quantity: 1
+
+# === CONFIGURACIÓN DE ARCHIVOS ===
+files:
+  valid_extensions: [".json"]
+  exclude_prefixes: [".", "desktop.ini"]
+  exclude_suffixes: [".tmp"]
+
+# === CONFIGURACIÓN DE LOGGING ===
+logging:
+  level: "INFO"  # DEBUG, INFO, WARNING, ERROR, CRITICAL
+  max_file_size: 5242880  # 5MB en bytes
+  backup_count: 3
+  error_file_size: 2097152  # 2MB en bytes
+  error_backup_count: 2
+  log_dir: "logs"
+
+# === CONFIGURACIÓN OCR ===
+ocr:
+  tesseract_path: "C:\\Program Files\\Tesseract-OCR\\tesseract.exe"
+  tesseract_config: "--oem 3 --psm 6"
+  easyocr_languages: ["en"]
+  easyocr_gpu: false
+  
+  # Palabras clave para detección de totales
+  totales_keywords:
+    - "Total antes del descuento"
+    - "Descuento"
+    - "Gastos adicionales" 
+    - "Redondeo"
+    - "Impuesto"
+    - "Total del documento"
+    - "Total antes"
+    - "Total documento"
+
+# === CONFIGURACIÓN DEL SISTEMA ===
+system:
+  main_loop_interval: 10  # segundos entre verificaciones
+  schedule_interval: 10   # minutos entre ejecuciones programadas
+  error_recovery_wait: 30 # segundos de espera tras error
+  
+# === MENSAJES DEL SISTEMA ===
+messages:
+  system_startup: "=== SISTEMA RPA TAMAPRINT ==="
+  system_active: "Sistema RPA activo. Presiona Ctrl+C para detener."
+  system_monitoring: "Sistema RPA en espera - monitoreando nuevos archivos JSON..."
+  system_stopped: "Sistema RPA detenido por el usuario."
+  next_execution: "Proceso RPA completado, esperando próxima ejecución en 10 minutos"
+
+# === CONFIGURACIÓN DE DESARROLLO ===
+development:
+  enable_debug_screenshots: false
+  debug_screenshot_path: "./debug_screenshots"
+  enable_performance_metrics: true
+  enable_detailed_logging: false

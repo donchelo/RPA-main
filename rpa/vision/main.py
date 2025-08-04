@@ -5,6 +5,7 @@ import easyocr
 import numpy as np
 from PIL import Image
 import pyautogui
+from rpa.vision.template_matcher import template_matcher, find_template, load_template
 
 # Configurar la ruta de Tesseract para Windows
 pytesseract.pytesseract.tesseract_cmd = r'C:\Program Files\Tesseract-OCR\tesseract.exe'
@@ -40,28 +41,28 @@ class Vision:
         self.scroll_to_bottom_image = cv2.imread('./rpa/vision/reference_images/scroll_to_bottom.png', cv2.IMREAD_COLOR)
 
     def get_client_coordinates(self):
-        result_client = cv2.matchTemplate(self.sap_orden_de_ventas_template_image, self.client_field_image ,cv2.TM_CCOEFF_NORMED)
-        min_val_client, max_val_client, min_loc_client, max_loc_client = cv2.minMaxLoc(result_client)
-        w_client = self.client_field_image.shape[1]
-        h_client = self.client_field_image.shape[0]
-        center_point_client = (max_loc_client[0] + w_client - w_client//40, max_loc_client[1] + h_client//2)
-        return center_point_client
+        offset = (-self.client_field_image.shape[1]//40, 0)  # Offset específico para cliente
+        return template_matcher.find_template(
+            self.client_field_image, 
+            self.sap_orden_de_ventas_template_image,
+            offset=offset
+        )
     
     def get_orden_coordinates(self):
-        result_orden = cv2.matchTemplate(self.sap_orden_de_ventas_template_image, self.orden_compra_image ,cv2.TM_CCOEFF_NORMED)
-        min_val_orden, max_val_orden, min_loc_orden, max_loc_orden = cv2.minMaxLoc(result_orden)
-        w_orden = self.orden_compra_image.shape[1]
-        h_orden = self.orden_compra_image.shape[0]
-        center_point_orden = (max_loc_orden[0] + w_orden - w_orden//30, max_loc_orden[1] + h_orden//2)
-        return center_point_orden
+        offset = (-self.orden_compra_image.shape[1]//30, 0)  # Offset específico para orden
+        return template_matcher.find_template(
+            self.orden_compra_image,
+            self.sap_orden_de_ventas_template_image,
+            offset=offset
+        )
     
     def get_fecha_coordinates(self):
-        result_fecha = cv2.matchTemplate(self.sap_orden_de_ventas_template_image, self.fecha_entrega_image ,cv2.TM_CCOEFF_NORMED)
-        min_val_fecha, max_val_fecha, min_loc_fecha, max_loc_fecha = cv2.minMaxLoc(result_fecha)
-        w_fecha = self.fecha_entrega_image.shape[1]
-        h_fecha = self.fecha_entrega_image.shape[0]
-        center_point_fecha = (max_loc_fecha[0] + w_fecha - w_fecha//30, max_loc_fecha[1] + h_fecha//2)
-        return center_point_fecha
+        offset = (-self.fecha_entrega_image.shape[1]//30, 0)  # Offset específico para fecha
+        return template_matcher.find_template(
+            self.fecha_entrega_image,
+            self.sap_orden_de_ventas_template_image,
+            offset=offset
+        )
     
     def get_primer_articulo_coordinates(self):
         result_primer = cv2.matchTemplate(self.sap_orden_de_ventas_template_image, self.primer_articulo_image ,cv2.TM_CCOEFF_NORMED)
@@ -279,73 +280,24 @@ class Vision:
             return None
     
     def get_ventas_order_button_coordinates(self):
-        """
-        Busca el botón de Orden de Ventas en la pantalla actual usando template matching
-        Retorna las coordenadas del centro del botón encontrado
-        """
-        try:
-            logger.info("PASO 4.3.1: Iniciando búsqueda del botón de Orden de Ventas")
-            
-            # Tomar captura de pantalla actual para template matching
-            logger.info("PASO 4.3.2: Capturando pantalla para template matching")
-            screenshot = pyautogui.screenshot()
-            screenshot_np = np.array(screenshot)
-            screenshot_cv = cv2.cvtColor(screenshot_np, cv2.COLOR_RGB2BGR)
-            logger.info("PASO 4.3.2 COMPLETADO: Captura de pantalla procesada")
-            
-            # Realizar template matching
-            logger.info("PASO 4.3.3: Ejecutando template matching con imagen de referencia")
-            result_ventas_order = cv2.matchTemplate(screenshot_cv, self.sap_ventas_order_button_image, cv2.TM_CCOEFF_NORMED)
-            min_val_ventas_order, max_val_ventas_order, min_loc_ventas_order, max_loc_ventas_order = cv2.minMaxLoc(result_ventas_order)
-            
-            logger.info(f"PASO 4.3.3 COMPLETADO: Template matching ejecutado - Confianza: {max_val_ventas_order:.3f}")
-            
-            # Umbral de confianza
-            if max_val_ventas_order > 0.8:
-                w_ventas_order = self.sap_ventas_order_button_image.shape[1]
-                h_ventas_order = self.sap_ventas_order_button_image.shape[0]
-                center_point_ventas_order = (max_loc_ventas_order[0] + w_ventas_order//2, max_loc_ventas_order[1] + h_ventas_order//2)
-                logger.info(f'PASO 4.3 EXITOSO: Botón de Orden de Ventas encontrado. Coordenadas: {center_point_ventas_order}. Confianza: {max_val_ventas_order:.3f}')
-                return center_point_ventas_order
-            else:
-                logger.warning(f'PASO 4.3 FALLIDO: Botón de Orden de Ventas no encontrado. Confianza: {max_val_ventas_order:.3f} (umbral: 0.8)')
-                return None
-                
-        except Exception as e:
-            logger.error(f"PASO 4.3 ERROR: Error en template matching del botón Orden de Ventas: {str(e)}")
-            return None
+        """Busca el botón de Orden de Ventas en la pantalla actual"""
+        logger.info("PASO 4.3: Buscando botón de Orden de Ventas")
+        coordinates = template_matcher.find_template(
+            self.sap_ventas_order_button_image,
+            confidence=0.8
+        )
+        if coordinates:
+            logger.info(f'PASO 4.3 EXITOSO: Botón encontrado en {coordinates}')
+        else:
+            logger.warning('PASO 4.3 FALLIDO: Botón no encontrado')
+        return coordinates
     
     def get_sap_coordinates(self):
-        """
-        Busca el icono de SAP Business One usando template matching
-        Retorna las coordenadas del centro del icono encontrado
-        """
-        try:
-            # Tomar captura de pantalla actual para template matching
-            screenshot = pyautogui.screenshot()
-            screenshot_np = np.array(screenshot)
-            screenshot_cv = cv2.cvtColor(screenshot_np, cv2.COLOR_RGB2BGR)
-            
-            # Realizar template matching
-            result_sap = cv2.matchTemplate(screenshot_cv, self.sap_icon_image, cv2.TM_CCOEFF_NORMED)
-            min_val_sap, max_val_sap, min_loc_sap, max_loc_sap = cv2.minMaxLoc(result_sap)
-            
-            logger.info(f"Template matching del icono SAP - Confianza: {max_val_sap:.3f}")
-            
-            # Umbral de confianza más flexible (0.7 en lugar de 0.9)
-            if max_val_sap > 0.7:
-                w_sap = self.sap_icon_image.shape[1]
-                h_sap = self.sap_icon_image.shape[0]
-                center_point_sap = (max_loc_sap[0] + w_sap//2, max_loc_sap[1] + h_sap//2)
-                logger.info(f'Icono de SAP encontrado. Coordenadas: {center_point_sap}. Confianza: {max_val_sap:.3f}')
-                return center_point_sap
-            else:
-                logger.warning(f'Icono de SAP no encontrado. Confianza: {max_val_sap:.3f} (umbral: 0.7)')
-                return None
-                
-        except Exception as e:
-            logger.error(f"Error en template matching del icono SAP: {str(e)}")
-            return None
+        """Busca el icono de SAP Business One usando template matching"""
+        return template_matcher.find_template(
+            self.sap_icon_image,
+            confidence=0.7  # Umbral específico para SAP
+        )
 
     def get_sap_text_coordinates(self):
         """
@@ -456,38 +408,12 @@ class Vision:
         return None
 
     def get_scrollbar_coordinates(self):
-        """
-        Busca la barra de desplazamiento (scroll) en la pantalla actual
-        Retorna las coordenadas del centro de la barra de desplazamiento
-        """
-        try:
-            logger.info("Iniciando búsqueda de la barra de desplazamiento")
-            
-            # Tomar captura de pantalla actual para template matching
-            screenshot = pyautogui.screenshot()
-            screenshot_np = np.array(screenshot)
-            screenshot_cv = cv2.cvtColor(screenshot_np, cv2.COLOR_RGB2BGR)
-            
-            # Realizar template matching con la imagen de referencia de la barra de desplazamiento
-            result_scrollbar = cv2.matchTemplate(screenshot_cv, self.scroll_to_bottom_image, cv2.TM_CCOEFF_NORMED)
-            min_val_scrollbar, max_val_scrollbar, min_loc_scrollbar, max_loc_scrollbar = cv2.minMaxLoc(result_scrollbar)
-            
-            logger.info(f"Template matching de la barra de desplazamiento - Confianza: {max_val_scrollbar:.3f}")
-            
-            # Umbral de confianza
-            if max_val_scrollbar > 0.8:
-                w_scrollbar = self.scroll_to_bottom_image.shape[1]
-                h_scrollbar = self.scroll_to_bottom_image.shape[0]
-                center_point_scrollbar = (max_loc_scrollbar[0] + w_scrollbar//2, max_loc_scrollbar[1] + h_scrollbar//2)
-                logger.info(f'Barra de desplazamiento encontrada. Coordenadas: {center_point_scrollbar}. Confianza: {max_val_scrollbar:.3f}')
-                return center_point_scrollbar
-            else:
-                logger.warning(f'Barra de desplazamiento no encontrada. Confianza: {max_val_scrollbar:.3f} (umbral: 0.8)')
-                return None
-                
-        except Exception as e:
-            logger.error(f"Error en búsqueda de la barra de desplazamiento: {str(e)}")
-            return None
+        """Busca la barra de desplazamiento en la pantalla actual"""
+        logger.info("Buscando barra de desplazamiento")
+        return template_matcher.find_template(
+            self.scroll_to_bottom_image,
+            confidence=0.8
+        )
 
     def image_show(self, image):
         cv2.imshow('image', image)
