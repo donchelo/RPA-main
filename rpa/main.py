@@ -27,15 +27,18 @@ class RPA:
             time.sleep(1)
             pyautogui.screenshot("./rpa/vision/reference_images/template.png")
             vision.save_template()
-            coordinates = vision.get_client_coordinates()
-            time.sleep(1)
-            pyautogui.moveTo(coordinates, duration=0.5)
-            time.sleep(1)
-            pyautogui.click()
-            time.sleep(1)
+            # CORRECCIÓN: Solo usar tabs, no mover mouse ni hacer clic
             pyautogui.typewrite(nit, interval=0.2)
             time.sleep(1)
             pyautogui.hotkey('enter')
+            time.sleep(1)
+            # Navegar con 3 tabs después del NIT
+            pyautogui.hotkey('tab')
+            time.sleep(0.5)
+            pyautogui.hotkey('tab')
+            time.sleep(0.5)
+            pyautogui.hotkey('tab')
+            time.sleep(0.5)
             
             duration = time.time() - start_time
             rpa_logger.log_performance("Carga de NIT", duration)
@@ -51,14 +54,18 @@ class RPA:
         
         try:
             time.sleep(1)
-            coordinates = vision.get_orden_coordinates()
-            pyautogui.moveTo(coordinates, duration=0.5)
-            time.sleep(1)
-            pyautogui.click()
-            time.sleep(1)
+            # CORRECCIÓN: Solo usar tabs, no mover mouse ni hacer clic
             pyautogui.typewrite(orden_compra, interval=0.2)
             time.sleep(1)
+            # Navegar con 4 tabs después de la orden de compra
             pyautogui.hotkey('tab')
+            time.sleep(0.5)
+            pyautogui.hotkey('tab')
+            time.sleep(0.5)
+            pyautogui.hotkey('tab')
+            time.sleep(0.5)
+            pyautogui.hotkey('tab')
+            time.sleep(0.5)
             
             duration = time.time() - start_time
             rpa_logger.log_performance("Carga de orden de compra", duration)
@@ -74,14 +81,18 @@ class RPA:
         
         try:
             time.sleep(1)
-            coordinates = vision.get_fecha_coordinates()
-            pyautogui.moveTo(coordinates, duration=0.5)
-            time.sleep(1)
-            pyautogui.click()
-            time.sleep(1)
+            # Ya estamos posicionados en el campo después de los 4 tabs desde orden de compra
             pyautogui.typewrite(fecha_entrega, interval=0.2)
             time.sleep(1)
+            # CORRECCIÓN: Hacer 4 TABS después de la fecha de entrega general (como describes)
             pyautogui.hotkey('tab')
+            time.sleep(0.5)
+            pyautogui.hotkey('tab')
+            time.sleep(0.5)
+            pyautogui.hotkey('tab')
+            time.sleep(0.5)
+            pyautogui.hotkey('tab')
+            time.sleep(0.5)
             
             duration = time.time() - start_time
             rpa_logger.log_performance("Carga de fecha de entrega", duration)
@@ -109,29 +120,26 @@ class RPA:
                     y += row_height
                     pyautogui.click()
                     time.sleep(3)
+                    # CORRECCIÓN: Seguir tu flujo exacto - código + ENTER + TAB + TAB + cantidad + ENTER + siguiente artículo
                     pyautogui.typewrite(item['codigo'], interval=0.2)
                     time.sleep(3)
-                    pyautogui.hotkey('tab', "tab", interval=0.2)
+                    pyautogui.hotkey('enter')  # ENTER después del código
                     time.sleep(3)
-                    pyautogui.typewrite(str(item['fecha_entrega']), interval=0.2)
+                    pyautogui.hotkey('tab')  # Primer TAB
                     time.sleep(3)
-                    pyautogui.hotkey('tab')
+                    pyautogui.hotkey('tab')  # Segundo TAB
                     time.sleep(3)
-                    pyautogui.typewrite(str(item['cantidad']), interval=0.2)
+                    pyautogui.typewrite(str(item['cantidad']), interval=0.2)  # Cantidad después de los 2 TABs
                     time.sleep(3)
-                    pyautogui.hotkey('tab')
+                    pyautogui.hotkey('enter')  # ENTER después de la cantidad
                     time.sleep(3)
-                    # pyautogui.typewrite(str(item['precio_unitario']), interval=0.2)
-                    pyautogui.hotkey('tab')
-                    time.sleep(3)
-                    pyautogui.hotkey('tab')
-                    time.sleep(3)
+                    # Mover al siguiente artículo
                     pyautogui.moveTo(x, y, duration=0.5)
                     
                     item_duration = time.time() - item_start_time
                     rpa_logger.log_performance(f"Item {i} procesado", item_duration)
                     rpa_logger.log_action(f"Item {i} cargado exitosamente", 
-                                        f"Código: {item['codigo']}, Cantidad: {item['cantidad']}, Fecha: {item['fecha_entrega']}")
+                                        f"Código: {item['codigo']}, Cantidad: {item['cantidad']}")
                     
                 except Exception as e:
                     rpa_logger.log_error(f"Error al procesar item {i}: {str(e)}", 
