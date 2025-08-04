@@ -107,23 +107,26 @@ class RPA:
         rpa_logger.log_action("Iniciando carga de items", f"Total items: {len(items)}")
         
         try:
+            # Obtener coordenadas del primer artículo para calcular posiciones
             coordinates, row_height = vision.get_primer_articulo_coordinates()
             x = coordinates[0]
-            y = coordinates[1]
-            pyautogui.moveTo(x, y, duration=0.5)
+            y_initial = coordinates[1]
             
             for i, item in enumerate(items, 1):
                 item_start_time = time.time()
                 rpa_logger.log_action(f"Procesando item {i}/{len(items)}", f"Código: {item['codigo']}")
                 
                 try:
-                    y += row_height
-                    pyautogui.click()
-                    time.sleep(3)
-                    # CORRECCIÓN: Seguir tu flujo exacto - código + ENTER + TAB + TAB + cantidad + ENTER + siguiente artículo
+                    # Si no es el primer artículo, mover el mouse a la fila correspondiente
+                    if i > 1:
+                        y = y_initial + ((i - 1) * row_height)  # Calcular posición de la fila actual
+                        pyautogui.moveTo(x, y, duration=0.5)
+                        time.sleep(1)
+                        pyautogui.click()
+                        time.sleep(2)
+                    
+                    # CORRECCIÓN: Flujo con teclado - código + TAB + TAB + cantidad + ENTER
                     pyautogui.typewrite(item['codigo'], interval=0.2)
-                    time.sleep(3)
-                    pyautogui.hotkey('enter')  # ENTER después del código
                     time.sleep(3)
                     pyautogui.hotkey('tab')  # Primer TAB
                     time.sleep(3)
@@ -133,8 +136,6 @@ class RPA:
                     time.sleep(3)
                     pyautogui.hotkey('enter')  # ENTER después de la cantidad
                     time.sleep(3)
-                    # Mover al siguiente artículo
-                    pyautogui.moveTo(x, y, duration=0.5)
                     
                     item_duration = time.time() - item_start_time
                     rpa_logger.log_performance(f"Item {i} procesado", item_duration)
