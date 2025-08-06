@@ -225,35 +225,39 @@ class RPA:
             raise
 
     def take_totals_screenshot(self, filename):
-        """Toma una captura de pantalla de la sección de totales"""
+        """Toma una captura de pantalla de la sección de totales y la guarda en Procesados"""
         start_time = time.time()
-        rpa_logger.log_action("Iniciando captura de totales", f"Archivo: {filename}")
+        rpa_logger.log_action("Iniciando captura de pantalla para validación", f"Archivo: {filename}")
         
         try:
-            # NUEVA UBICACIÓN: Misma carpeta que los JSON procesados
+            # CAMBIO: Nueva ubicación en la carpeta Procesados
             processed_dir = './data/outputs_json/Procesados'
             
             # Crear directorio si no existe
             if not os.path.exists(processed_dir):
                 os.makedirs(processed_dir)
+                rpa_logger.log_action("Directorio de procesados creado", f"Ruta: {processed_dir}")
             
-            # Generar nombre del archivo para totales
+            # CAMBIO: Nueva convención de nombres
             base_name = filename.replace('.json', '')
-            totals_filename = f'{base_name}_totales.png'
-            saved_filename = f'{processed_dir}/{totals_filename}'
+            validation_filename = f'{base_name}_validation.png'
+            saved_filepath = os.path.join(processed_dir, validation_filename)
             
             # Tomar screenshot
             time.sleep(1)  # Esperar a que la página se estabilice
             screenshot = pyautogui.screenshot()
-            screenshot.save(saved_filename)
+            screenshot.save(saved_filepath)
             
             duration = time.time() - start_time
-            rpa_logger.log_performance("Captura de totales completada", duration)
-            rpa_logger.log_action("Captura de totales guardada exitosamente", f"Archivo: {totals_filename}")
+            rpa_logger.log_performance("Captura de pantalla para validación", duration)
+            rpa_logger.log_action("Captura de validación guardada exitosamente", f"Archivo: {validation_filename}")
+            rpa_logger.log_action("Ruta completa del screenshot", f"Ubicación: {saved_filepath}")
+            
+            return True
             
         except Exception as e:
-            rpa_logger.log_error(f"Error al tomar captura de totales: {str(e)}", f"Archivo: {filename}")
-            raise
+            rpa_logger.log_error(f"Error al tomar captura de pantalla: {str(e)}", f"Archivo: {filename}")
+            return False
 
     def move_json_to_processed(self, filename):
         """Mueve el archivo JSON procesado a la carpeta de procesados"""
@@ -266,12 +270,12 @@ class RPA:
             # Definir rutas
             source_path = f'./data/outputs_json/{filename}'
             processed_dir = './data/outputs_json/Procesados'
-            destination_path = f'{processed_dir}/{filename}'
+            destination_path = os.path.join(processed_dir, filename)
             
             # Crear directorio de procesados si no existe
             if not os.path.exists(processed_dir):
                 os.makedirs(processed_dir)
-                rpa_logger.log_action("PASO 8.5: Directorio de procesados creado", f"Ruta: {processed_dir}")
+                rpa_logger.log_action("Directorio de procesados creado", f"Ruta: {processed_dir}")
             
             # Verificar que el archivo fuente existe
             if not os.path.exists(source_path):
@@ -279,26 +283,32 @@ class RPA:
                 return False
             
             # Mover el archivo
-            rpa_logger.log_action("PASO 8.6: Moviendo archivo a procesados", f"De: {source_path} a: {destination_path}")
+            rpa_logger.log_action("Moviendo archivo JSON a procesados", f"De: {source_path} a: {destination_path}")
             shutil.move(source_path, destination_path)
             
+            # Verificar que tanto JSON como screenshot están listos para Make.com
+            screenshot_name = filename.replace('.json', '_validation.png')
+            screenshot_path = os.path.join(processed_dir, screenshot_name)
+            
+            files_status = {
+                'json_exists': os.path.exists(destination_path),
+                'screenshot_exists': os.path.exists(screenshot_path),
+                'json_path': destination_path,
+                'screenshot_path': screenshot_path
+            }
+            
             duration = time.time() - start_time
-            rpa_logger.log_performance("Archivo movido a procesados", duration)
-            rpa_logger.log_action("Archivo movido exitosamente a procesados", f"Archivo: {filename}")
+            rpa_logger.log_performance("Movimiento de archivo a procesados", duration)
+            rpa_logger.log_action("Archivo JSON movido exitosamente", f"Archivo: {filename}")
+            rpa_logger.log_action("Estado de archivos para Make.com", f"Status: {files_status}")
+            
             return True
             
         except Exception as e:
             rpa_logger.log_error(f"Error al mover archivo procesado: {str(e)}", f"Archivo: {filename}")
             return False
 
-    def take_order_inserted_screenshot(self, filename):
-        if not os.path.exists('./rpa/vision/reference_images/inserted_orders'):
-            os.makedirs('./rpa/vision/reference_images/inserted_orders')
-        saved_filename = f'./rpa/vision/reference_images/inserted_orders/{filename}'
-        time.sleep(1)
-        screenshot = pyautogui.screenshot()
-        screenshot.save(saved_filename)
-        rpa_logger.info(f'Screenshot taken and saved in {saved_filename}')
+
 
     def data_loader(self, data, filename):
         nit = data["comprador"]['nit']
@@ -311,17 +321,52 @@ class RPA:
         self.load_fecha_entrega(fecha_entrega)
         self.load_items(items)
         
-        # PASO 7: Tomar captura de pantalla completa
-        rpa_logger.log_action("PASO 7: Capturando pantalla completa", "Después de procesar todos los artículos")
-        self.take_totals_screenshot(filename)
+        # PASO 7: Captura para validación
+        screenshot_success = self.take_totals_screenshot(filename)
         
-        # PASO 8: Mover archivo JSON a procesados
-        if self.move_json_to_processed(filename):
-            rpa_logger.log_action("PASO 8 COMPLETADO: Procesamiento exitoso", f"Orden: {orden_compra}")
+        # PASO 8: Mover JSON
+        json_success = self.move_json_to_processed(filename)
+        
+        # PASO 9: Validar archivos para Make.com
+        if screenshot_success and json_success:
+            validation_result = self.validate_files_for_makecom(filename)
+            if validation_result['ready_for_makecom']:
+                rpa_logger.log_action("PROCESO COMPLETADO: Archivos listos para Make.com", f"Orden: {orden_compra}")
+            else:
+                rpa_logger.log_error("PROCESO INCOMPLETO: Archivos no están listos para Make.com", f"Orden: {orden_compra}")
+        
+        rpa_logger.info('Procesamiento RPA completado. Esperando validación en Make.com')
+
+    def validate_files_for_makecom(self, filename):
+        """Valida que tanto JSON como screenshot estén listos para Make.com"""
+        processed_dir = './data/outputs_json/Procesados'
+        
+        json_path = os.path.join(processed_dir, filename)
+        screenshot_name = filename.replace('.json', '_validation.png')
+        screenshot_path = os.path.join(processed_dir, screenshot_name)
+        
+        validation_result = {
+            'json_exists': os.path.exists(json_path),
+            'screenshot_exists': os.path.exists(screenshot_path),
+            'json_size': os.path.getsize(json_path) if os.path.exists(json_path) else 0,
+            'screenshot_size': os.path.getsize(screenshot_path) if os.path.exists(screenshot_path) else 0,
+            'ready_for_makecom': False
+        }
+        
+        # Ambos archivos deben existir y tener tamaño > 0
+        validation_result['ready_for_makecom'] = (
+            validation_result['json_exists'] and 
+            validation_result['screenshot_exists'] and
+            validation_result['json_size'] > 0 and
+            validation_result['screenshot_size'] > 0
+        )
+        
+        if validation_result['ready_for_makecom']:
+            rpa_logger.log_action("Archivos validados para Make.com", f"JSON: {filename}, Screenshot: {screenshot_name}")
         else:
-            rpa_logger.log_error("PASO 8 FALLIDO: Error al mover archivo procesado", f"Archivo: {filename}")
+            rpa_logger.log_error("Validación fallida para Make.com", f"Status: {validation_result}")
         
-        rpa_logger.info('loaded data successfully with RPA. Waiting for next run')
+        return validation_result
 
     def cancel_order(self):
         self.get_remote_desktop()
