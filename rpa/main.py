@@ -230,14 +230,17 @@ class RPA:
         rpa_logger.log_action("Iniciando captura de totales", f"Archivo: {filename}")
         
         try:
+            # NUEVA UBICACIÓN: Misma carpeta que los JSON procesados
+            processed_dir = './data/outputs_json/Procesados'
+            
             # Crear directorio si no existe
-            if not os.path.exists('./rpa/vision/reference_images/inserted_orders'):
-                os.makedirs('./rpa/vision/reference_images/inserted_orders')
+            if not os.path.exists(processed_dir):
+                os.makedirs(processed_dir)
             
             # Generar nombre del archivo para totales
             base_name = filename.replace('.json', '')
             totals_filename = f'{base_name}_totales.png'
-            saved_filename = f'./rpa/vision/reference_images/inserted_orders/{totals_filename}'
+            saved_filename = f'{processed_dir}/{totals_filename}'
             
             # Tomar screenshot
             time.sleep(1)  # Esperar a que la página se estabilice
