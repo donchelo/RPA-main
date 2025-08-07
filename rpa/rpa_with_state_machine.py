@@ -10,12 +10,294 @@ from rpa.error_handler import (
     error_handler, with_error_handling, ErrorType, ErrorSeverity,
     handle_template_error, handle_window_error, handle_sap_error
 )
+from rpa.state_machine import StateMachine, RPAState, RPAEvent
+from rpa.rpa_state_handlers import RPAStateHandlers
 
 vision = Vision()
 
-class RPA:
+
+class RPAWithStateMachine:
+    """Versión del RPA que utiliza máquina de estados para control de flujo"""
+    
     def __init__(self):
         self.remote_desktop_window = "20.96.6.64 - Conexión a Escritorio remoto"
+        
+        # Inicializar máquina de estados
+        self.state_machine = StateMachine()
+        self.state_handlers = RPAStateHandlers(self)
+        
+        # Registrar todos los manejadores de estado
+        self._register_state_handlers()
+        
+        # Registrar callbacks de entrada y salida si es necesario
+        self._register_callbacks()
+
+    def _register_state_handlers(self):
+        """Registra todos los manejadores de estado"""
+        self.state_machine.register_state_handler(
+            RPAState.IDLE, self.state_handlers.handle_idle_state
+        )
+        self.state_machine.register_state_handler(
+            RPAState.CONNECTING_REMOTE_DESKTOP, self.state_handlers.handle_connecting_remote_desktop
+        )
+        self.state_machine.register_state_handler(
+            RPAState.OPENING_SAP, self.state_handlers.handle_opening_sap
+        )
+        self.state_machine.register_state_handler(
+            RPAState.NAVIGATING_TO_SALES_ORDER, self.state_handlers.handle_navigating_to_sales_order
+        )
+        self.state_machine.register_state_handler(
+            RPAState.LOADING_NIT, self.state_handlers.handle_loading_nit
+        )
+        self.state_machine.register_state_handler(
+            RPAState.LOADING_ORDER, self.state_handlers.handle_loading_order
+        )
+        self.state_machine.register_state_handler(
+            RPAState.LOADING_DATE, self.state_handlers.handle_loading_date
+        )
+        self.state_machine.register_state_handler(
+            RPAState.LOADING_ITEMS, self.state_handlers.handle_loading_items
+        )
+        self.state_machine.register_state_handler(
+            RPAState.TAKING_SCREENSHOT, self.state_handlers.handle_taking_screenshot
+        )
+        self.state_machine.register_state_handler(
+            RPAState.MOVING_JSON, self.state_handlers.handle_moving_json
+        )
+        self.state_machine.register_state_handler(
+            RPAState.COMPLETED, self.state_handlers.handle_completed_state
+        )
+        self.state_machine.register_state_handler(
+            RPAState.ERROR, self.state_handlers.handle_error_state
+        )
+        self.state_machine.register_state_handler(
+            RPAState.RETRYING, self.state_handlers.handle_retrying_state
+        )
+
+    def _register_callbacks(self):
+        """Registra callbacks de entrada y salida de estados si son necesarios"""
+        # Callback de entrada para estado de error
+        def on_error_entry(context, **kwargs):
+            rpa_logger.log_action(
+                "ENTRANDO A ESTADO DE ERROR",
+                f"Archivo: {context.current_file}, Intento: {context.retry_count}"
+            )
+        
+        self.state_machine.register_entry_callback(RPAState.ERROR, on_error_entry)
+        
+        # Callback de entrada para estado completado
+        def on_completed_entry(context, **kwargs):
+            rpa_logger.log_action(
+                "PROCESO COMPLETADO - ENTRANDO A ESTADO FINAL",
+                f"Archivo: {context.current_file}"
+            )
+        
+        self.state_machine.register_entry_callback(RPAState.COMPLETED, on_completed_entry)
+
+    def process_single_file(self, file_path: str, data: dict) -> bool:
+        """
+        Procesa un solo archivo utilizando la máquina de estados
+        
+        Args:
+            file_path: Ruta del archivo JSON a procesar
+            data: Datos del archivo JSON ya cargados
+            
+        Returns:
+            bool: True si el procesamiento fue exitoso, False en caso contrario
+        """
+        file_name = os.path.basename(file_path)
+        rpa_logger.log_action(
+            f"Iniciando procesamiento con máquina de estados",
+            f"Archivo: {file_name}"
+        )
+        
+        # Reiniciar la máquina de estados para este archivo
+        self.state_machine.reset()
+        
+        # Iniciar el procesamiento
+        success = self.state_machine.start_processing(file_name, data)
+        if not success:
+            rpa_logger.log_error(f"No se pudo iniciar el procesamiento", f"Archivo: {file_name}")
+            return False
+        
+        # Ejecutar el bucle de la máquina de estados
+        max_iterations = 100  # Prevenir bucles infinitos
+        iteration = 0
+        
+        while (self.state_machine.get_current_state() not in [RPAState.COMPLETED, RPAState.IDLE] 
+               and iteration < max_iterations):
+            
+            iteration += 1
+            current_state = self.state_machine.get_current_state()
+            
+            rpa_logger.log_action(
+                f"Ejecutando estado: {current_state.value}",
+                f"Iteración: {iteration}, Archivo: {file_name}"
+            )
+            
+            try:
+                # Ejecutar el estado actual
+                next_event = self.state_machine.execute_current_state()
+                
+                if next_event is None:
+                    # El estado no generó un evento, posiblemente es un estado final
+                    if current_state == RPAState.COMPLETED:
+                        rpa_logger.log_action("Procesamiento completado exitosamente", f"Archivo: {file_name}")
+                        return True
+                    elif current_state == RPAState.IDLE:
+                        rpa_logger.log_action("Sistema regresó a estado IDLE", f"Archivo: {file_name}")
+                        return False
+                    else:
+                        rpa_logger.log_error(
+                            f"Estado {current_state.value} no generó evento",
+                            f"Archivo: {file_name}"
+                        )
+                        break
+                
+                # Ejecutar la transición
+                transition_success = self.state_machine.trigger_event(next_event)
+                if not transition_success:
+                    rpa_logger.log_error(
+                        f"Falló la transición con evento {next_event.value}",
+                        f"Estado actual: {current_state.value}, Archivo: {file_name}"
+                    )
+                    break
+                
+                # Manejo especial para errores
+                if next_event == RPAEvent.ERROR_OCCURRED:
+                    context = self.state_machine.get_context()
+                    self.state_machine.handle_error(context.error_message or "Error desconocido")
+                
+            except Exception as e:
+                rpa_logger.log_error(
+                    f"Error ejecutando estado {current_state.value}: {str(e)}",
+                    f"Archivo: {file_name}"
+                )
+                # Intentar manejar el error
+                self.state_machine.handle_error(str(e))
+        
+        # Verificar el resultado final
+        final_state = self.state_machine.get_current_state()
+        
+        if final_state == RPAState.COMPLETED:
+            rpa_logger.log_action("Procesamiento completado exitosamente", f"Archivo: {file_name}")
+            return True
+        elif iteration >= max_iterations:
+            rpa_logger.log_error(
+                f"Procesamiento detenido: máximo de iteraciones alcanzado",
+                f"Estado final: {final_state.value}, Archivo: {file_name}"
+            )
+            return False
+        else:
+            rpa_logger.log_error(
+                f"Procesamiento terminó en estado: {final_state.value}",
+                f"Archivo: {file_name}"
+            )
+            return False
+
+    def run(self):
+        """Ejecuta el procesamiento de todos los archivos JSON disponibles"""
+        start_time = time.time()
+        rpa_logger.log_action("Iniciando RPA con máquina de estados", "Buscando archivos JSON")
+        
+        directory = './data/outputs_json'
+        
+        try:
+            # Filtrar solo archivos JSON válidos
+            files = [f for f in os.listdir(directory) 
+                    if os.path.isfile(os.path.join(directory, f))
+                    and f.endswith('.json')
+                    and not f.startswith('.')
+                    and not f.endswith('.tmp')]
+            
+            if len(files) == 0:
+                rpa_logger.log_action(
+                    "No hay archivos JSON disponibles para procesar",
+                    f"Directorio: {directory}"
+                )
+                return
+            
+            rpa_logger.log_action(
+                f"Archivos encontrados para procesar",
+                f"Total: {len(files)} archivos"
+            )
+            
+            successful_files = 0
+            failed_files = 0
+            
+            for i, file in enumerate(files, 1):
+                file_path = os.path.join(directory, file)
+                rpa_logger.log_action(
+                    f"Procesando archivo {i}/{len(files)}",
+                    f"Archivo: {file}"
+                )
+                
+                try:
+                    # Cargar datos del archivo JSON
+                    with open(file_path) as f:
+                        data = json.load(f)
+                    
+                    rpa_logger.log_action("Archivo JSON cargado", f"Archivo: {file}")
+                    
+                    # Procesar el archivo usando la máquina de estados
+                    success = self.process_single_file(file_path, data)
+                    
+                    if success:
+                        successful_files += 1
+                        rpa_logger.log_action(
+                            f"Archivo procesado exitosamente",
+                            f"Archivo: {file}"
+                        )
+                    else:
+                        failed_files += 1
+                        rpa_logger.log_error(
+                            f"Falló el procesamiento del archivo",
+                            f"Archivo: {file}"
+                        )
+                    
+                except json.JSONDecodeError as e:
+                    failed_files += 1
+                    rpa_logger.log_error(
+                        f"Error decodificando archivo JSON: {str(e)}",
+                        f"Archivo: {file}"
+                    )
+                    continue
+                    
+                except Exception as e:
+                    failed_files += 1
+                    rpa_logger.log_error(
+                        f"Error inesperado procesando archivo: {str(e)}",
+                        f"Archivo: {file}"
+                    )
+                    continue
+            
+            # Estadísticas finales
+            total_duration = time.time() - start_time
+            rpa_logger.log_performance("Procesamiento RPA completado", total_duration)
+            rpa_logger.log_action(
+                "Resumen de procesamiento",
+                f"Exitosos: {successful_files}, Fallidos: {failed_files}, Total: {len(files)}"
+            )
+            
+        except Exception as e:
+            rpa_logger.log_error(
+                f"Error accediendo al directorio {directory}: {str(e)}",
+                f"Directorio: {directory}"
+            )
+            return
+
+    def get_state_info(self) -> dict:
+        """Retorna información del estado actual de la máquina de estados"""
+        return self.state_machine.get_state_info()
+
+    def reset_state_machine(self):
+        """Reinicia la máquina de estados"""
+        self.state_machine.reset()
+        rpa_logger.log_action("Máquina de estados reiniciada manualmente", "Estado: IDLE")
+
+    # === MÉTODOS DE RPA ORIGINALES ===
+    # Estos métodos mantienen la funcionalidad original del RPA
+    # y son utilizados por los manejadores de estado
 
     def print_position(self):
         while True:
@@ -26,32 +308,26 @@ class RPA:
         start_time = time.time()
         rpa_logger.log_action("Iniciando carga de NIT", f"NIT: {nit}")
         
-        # Validar NIT
         if not nit or not str(nit).strip():
             raise ValueError(f"NIT inválido: {nit}")
         
         try:
             smart_sleep('short')
             
-            # Capturar template actual
             pyautogui.screenshot("./rpa/vision/reference_images/template.png")
             vision.save_template()
             
-            # Limpiar campo antes de escribir (por si hay datos previos)
             pyautogui.hotkey('ctrl', 'a')
             smart_sleep('very_short')
             
-            # Ingresar NIT con validación
             nit_str = str(nit).strip()
             pyautogui.typewrite(nit_str, interval=0.2)
             smart_sleep('after_input')
-            smart_sleep('after_nit')  # Tiempo adicional para procesamiento
+            smart_sleep('after_nit')
             
-            # Confirmar entrada
             pyautogui.hotkey('enter')
             smart_sleep('after_input')
             
-            # Navegar con tabs configurables
             tabs_count = get_navigation_tabs('after_nit')
             smart_waits.smart_tab_wait(tabs_count, "after_nit")
             for i in range(tabs_count):
@@ -72,10 +348,8 @@ class RPA:
         
         try:
             smart_sleep('short')
-            # CORRECCIÓN: Solo usar tabs, no mover mouse ni hacer clic
             pyautogui.typewrite(orden_compra, interval=0.2)
             smart_sleep('after_input')
-            # Navegar con tabs configurables después de la orden de compra
             tabs_count = get_navigation_tabs('after_order')
             smart_waits.smart_tab_wait(tabs_count, "orden_compra")
             for i in range(tabs_count):
@@ -96,10 +370,8 @@ class RPA:
         
         try:
             smart_sleep('short')
-            # Ya estamos posicionados en el campo después de los tabs desde orden de compra
             pyautogui.typewrite(fecha_entrega, interval=0.2)
             smart_sleep('after_input')
-            # CORRECCIÓN: Usar tabs configurables después de la fecha de entrega
             tabs_count = get_navigation_tabs('after_date')
             smart_waits.smart_tab_wait(tabs_count, "fecha_entrega")
             for i in range(tabs_count):
@@ -119,7 +391,6 @@ class RPA:
         rpa_logger.log_action("Iniciando carga de items", f"Total items: {len(items)}")
         
         try:
-            # CORRECCIÓN: Solo usar navegación por teclado, sin coordenadas de mouse
             rpa_logger.log_action("Iniciando navegación por teclado", "Sin movimientos de mouse")
             
             for i, item in enumerate(items, 1):
@@ -127,30 +398,26 @@ class RPA:
                 rpa_logger.log_action(f"Procesando item {i}/{len(items)}", f"Código: {item['codigo']}")
                 
                 try:
-                    # CORRECCIÓN: Flujo con teclado - código + TAB + TAB + cantidad + TAB (para siguiente artículo)
                     pyautogui.typewrite(item['codigo'], interval=0.2)
                     time.sleep(3)
-                    time.sleep(1)  # Espera adicional después de ingresar el código
-                    pyautogui.hotkey('tab')  # Primer TAB
+                    time.sleep(1)
+                    pyautogui.hotkey('tab')
                     time.sleep(2)
-                    pyautogui.hotkey('tab')  # Segundo TAB
+                    pyautogui.hotkey('tab')
                     time.sleep(2)
-                    pyautogui.typewrite(str(item['cantidad']), interval=0.2)  # Cantidad después de los 2 TABs
+                    pyautogui.typewrite(str(item['cantidad']), interval=0.2)
                     time.sleep(2)
                     
-                    # CORRECCIÓN: 3 TABs después de la cantidad para pasar al siguiente artículo
-                    # Si es el último artículo, hacer solo 1 TAB para ir a totales
-                    if i < len(items):  # Si no es el último artículo
-                        pyautogui.hotkey('tab')  # Primer TAB después de cantidad
+                    if i < len(items):
+                        pyautogui.hotkey('tab')
                         time.sleep(2)
-                        pyautogui.hotkey('tab')  # Segundo TAB después de cantidad
+                        pyautogui.hotkey('tab')
                         time.sleep(2)
-                        pyautogui.hotkey('tab')  # Tercer TAB después de cantidad
+                        pyautogui.hotkey('tab')
                         time.sleep(2)
                         rpa_logger.log_action(f"Item {i} - Navegando al siguiente artículo", f"Código: {item['codigo']}")
                     else:
-                        # Último artículo: solo 1 TAB para ir a totales
-                        pyautogui.hotkey('tab')  # Solo 1 TAB después de cantidad
+                        pyautogui.hotkey('tab')
                         time.sleep(2)
                         rpa_logger.log_action(f"Item {i} - Último artículo completado, navegando a totales", f"Código: {item['codigo']}")
                     
@@ -173,12 +440,10 @@ class RPA:
             raise
 
     def scroll_to_bottom(self):
-        """Baja el scroll hasta el final de la página"""
         start_time = time.time()
         rpa_logger.log_action("Iniciando scroll hacia abajo", "Buscando barra de desplazamiento vertical")
         
         try:
-            # Buscar la barra de desplazamiento usando la imagen de referencia
             rpa_logger.log_action("Buscando barra de desplazamiento", "Usando imagen de referencia: scroll_to_bottom.png")
             coordinates = vision.get_scrollbar_coordinates()
             
@@ -186,7 +451,6 @@ class RPA:
                 rpa_logger.log_error('No se pudo encontrar la barra de desplazamiento en la pantalla', 'Imagen de referencia no encontrada')
                 return False
                 
-            # Verificar que las coordenadas sean válidas
             if not isinstance(coordinates, tuple) or len(coordinates) != 2:
                 rpa_logger.log_error(f'Coordenadas inválidas de scrollbar: {coordinates}', 'Formato de coordenadas incorrecto')
                 return False
@@ -194,22 +458,17 @@ class RPA:
             scrollbar_x, scrollbar_y = coordinates
             rpa_logger.log_action("Barra de desplazamiento encontrada", f"Coordenadas: {coordinates}")
             
-            # Hacer clic en la barra de desplazamiento
             rpa_logger.log_action("Haciendo clic en barra de desplazamiento", f"Posición: {coordinates}")
             pyautogui.click(scrollbar_x, scrollbar_y)
             time.sleep(1)
             
-            # Obtener dimensiones de pantalla para calcular distancia de scroll
             screen_width, screen_height = pyautogui.size()
-            
-            # Arrastrar hacia abajo hasta el final
-            # Calcular la distancia para bajar completamente
-            scroll_distance = screen_height - 100  # Dejar un margen de 100 píxeles
+            scroll_distance = screen_height - 100
             
             rpa_logger.log_action("Arrastrando scroll hacia abajo", f"Distancia: {scroll_distance} píxeles")
-            pyautogui.drag(0, scroll_distance, duration=2)  # Arrastrar hacia abajo durante 2 segundos
+            pyautogui.drag(0, scroll_distance, duration=2)
             
-            time.sleep(2)  # Esperar a que se complete el scroll
+            time.sleep(2)
             
             duration = time.time() - start_time
             rpa_logger.log_performance("Scroll hacia abajo completado", duration)
@@ -222,26 +481,21 @@ class RPA:
             raise
 
     def take_totals_screenshot(self, filename):
-        """Toma una captura de pantalla de la sección de totales y la guarda en Procesados"""
         start_time = time.time()
         rpa_logger.log_action("Iniciando captura de pantalla para validación", f"Archivo: {filename}")
         
         try:
-            # CAMBIO: Nueva ubicación en la carpeta Procesados
             processed_dir = './data/outputs_json/Procesados'
             
-            # Crear directorio si no existe
             if not os.path.exists(processed_dir):
                 os.makedirs(processed_dir)
                 rpa_logger.log_action("Directorio de procesados creado", f"Ruta: {processed_dir}")
             
-            # CAMBIO: Nueva convención de nombres
             base_name = filename.replace('.json', '')
             validation_filename = f'{base_name}.png'
             saved_filepath = os.path.join(processed_dir, validation_filename)
             
-            # Tomar screenshot
-            time.sleep(1)  # Esperar a que la página se estabilice
+            time.sleep(1)
             screenshot = pyautogui.screenshot()
             screenshot.save(saved_filepath)
             
@@ -257,33 +511,27 @@ class RPA:
             return False
 
     def move_json_to_processed(self, filename):
-        """Mueve el archivo JSON procesado a la carpeta de procesados"""
         start_time = time.time()
         rpa_logger.log_action("Iniciando movimiento de archivo procesado", f"Archivo: {filename}")
         
         try:
             import shutil
             
-            # Definir rutas
             source_path = f'./data/outputs_json/{filename}'
             processed_dir = './data/outputs_json/Procesados'
             destination_path = os.path.join(processed_dir, filename)
             
-            # Crear directorio de procesados si no existe
             if not os.path.exists(processed_dir):
                 os.makedirs(processed_dir)
                 rpa_logger.log_action("Directorio de procesados creado", f"Ruta: {processed_dir}")
             
-            # Verificar que el archivo fuente existe
             if not os.path.exists(source_path):
                 rpa_logger.log_error(f"Archivo fuente no encontrado: {source_path}", f"Archivo: {filename}")
                 return False
             
-            # Mover el archivo
             rpa_logger.log_action("Moviendo archivo JSON a procesados", f"De: {source_path} a: {destination_path}")
             shutil.move(source_path, destination_path)
             
-            # Verificar que tanto JSON como screenshot están listos para Make.com
             screenshot_name = filename.replace('.json', '.png')
             screenshot_path = os.path.join(processed_dir, screenshot_name)
             
@@ -305,37 +553,7 @@ class RPA:
             rpa_logger.log_error(f"Error al mover archivo procesado: {str(e)}", f"Archivo: {filename}")
             return False
 
-
-
-    def data_loader(self, data, filename):
-        nit = data["comprador"]['nit']
-        orden_compra = data['orden_compra']
-        fecha_entrega = data['fecha_entrega']
-        items = data['items']
-
-        self.load_nit(nit)
-        self.load_orden_compra(orden_compra)
-        self.load_fecha_entrega(fecha_entrega)
-        self.load_items(items)
-        
-        # PASO 7: Captura para validación
-        screenshot_success = self.take_totals_screenshot(filename)
-        
-        # PASO 8: Mover JSON
-        json_success = self.move_json_to_processed(filename)
-        
-        # PASO 9: Validar archivos para Make.com
-        if screenshot_success and json_success:
-            validation_result = self.validate_files_for_makecom(filename)
-            if validation_result['ready_for_makecom']:
-                rpa_logger.log_action("PROCESO COMPLETADO: Archivos listos para Make.com", f"Orden: {orden_compra}")
-            else:
-                rpa_logger.log_error("PROCESO INCOMPLETO: Archivos no están listos para Make.com", f"Orden: {orden_compra}")
-        
-        rpa_logger.info('Procesamiento RPA completado. Esperando validación en Make.com')
-
     def validate_files_for_makecom(self, filename):
-        """Valida que tanto JSON como screenshot estén listos para Make.com"""
         processed_dir = './data/outputs_json/Procesados'
         
         json_path = os.path.join(processed_dir, filename)
@@ -350,7 +568,6 @@ class RPA:
             'ready_for_makecom': False
         }
         
-        # Ambos archivos deben existir y tener tamaño > 0
         validation_result['ready_for_makecom'] = (
             validation_result['json_exists'] and 
             validation_result['screenshot_exists'] and
@@ -386,13 +603,11 @@ class RPA:
                 smart_sleep('navigation_wait')
                 rpa_logger.log_action("Iniciando apertura de SAP", f"Intento {attempt + 1}/{max_attempts}")
                 
-                # Usar el nuevo método de búsqueda robusta (icono + texto como respaldo)
                 coordinates = vision.get_sap_coordinates_robust()
                 
                 if not coordinates:
                     raise Exception('No se pudo encontrar el icono de SAP Business One en la pantalla')
                     
-                # Verificamos que las coordenadas sean válidas
                 if not isinstance(coordinates, tuple) or len(coordinates) != 2:
                     raise Exception(f'Coordenadas inválidas de SAP: {coordinates}')
                     
@@ -403,11 +618,9 @@ class RPA:
                 pyautogui.doubleClick()
                 smart_sleep('sap_double_click')
                 
-                # Verificamos si SAP está respondiendo
                 pyautogui.hotkey('enter')
                 smart_sleep('sap_startup')
                 
-                # Verificamos si podemos tomar una captura de pantalla
                 screenshot = pyautogui.screenshot("./rpa/vision/reference_images/sap_desktop.png")
                 if screenshot:
                     rpa_logger.log_action("SAP abierto exitosamente", "Aplicación iniciada correctamente")
@@ -416,7 +629,7 @@ class RPA:
                     raise Exception('No se pudo tomar captura de pantalla de SAP')
                     
             except Exception as e:
-                if attempt == max_attempts - 1:  # Último intento
+                if attempt == max_attempts - 1:
                     rpa_logger.log_error(f'Error opening SAP after {max_attempts} attempts: {str(e)}', 'Error crítico en apertura de SAP')
                     return False
                 else:
@@ -451,7 +664,6 @@ class RPA:
         rpa_logger.log_action("Iniciando apertura de SAP orden de ventas", "Navegación usando atajos de teclado")
         
         try:
-            # Asegurar que la ventana esté activa antes de enviar comandos
             rpa_logger.log_action("PASO 4.0: Asegurando que la ventana esté activa", "Verificación de foco")
             windows = pyautogui.getWindowsWithTitle(self.remote_desktop_window)
             if windows:
@@ -461,7 +673,6 @@ class RPA:
                     time.sleep(2)
                     rpa_logger.log_action("PASO 4.0 COMPLETADO: Ventana activada", "Esperando 2 segundos")
             
-            # 1. Abrir módulos con Alt + M (método mejorado)
             rpa_logger.log_action("PASO 4.1: Abriendo menú módulos", "Atajo: Alt + M")
             pyautogui.keyDown('alt')
             time.sleep(0.1)
@@ -471,13 +682,11 @@ class RPA:
             time.sleep(2)
             rpa_logger.log_action("PASO 4.1 COMPLETADO: Menú módulos abierto", "Esperando 2 segundos")
             
-            # 2. Seleccionar Ventas con tecla 'V' (método mejorado)
             rpa_logger.log_action("PASO 4.2: Seleccionando módulo Ventas", "Tecla: V")
             pyautogui.press('v')
             time.sleep(2)
             rpa_logger.log_action("PASO 4.2 COMPLETADO: Módulo Ventas seleccionado", "Esperando 2 segundos")
             
-            # 3. Buscar y hacer clic en el botón de Orden de Ventas usando la imagen de referencia
             rpa_logger.log_action("PASO 4.3: Buscando botón de Orden de Ventas", "Usando imagen de referencia: sap_ventas_order_button.png")
             orden_ventas_coordinates = vision.get_ventas_order_button_coordinates()
             
@@ -487,7 +696,6 @@ class RPA:
                 
             rpa_logger.log_action("PASO 4.3 COMPLETADO: Botón de Orden de Ventas encontrado", f"Coordenadas: {orden_ventas_coordinates}")
             
-            # 4. Hacer clic en el botón
             rpa_logger.log_action("PASO 4.4: Moviendo cursor al botón de Orden de Ventas", f"Coordenadas: {orden_ventas_coordinates}")
             pyautogui.moveTo(orden_ventas_coordinates, duration=0.5)
             time.sleep(1)
@@ -495,10 +703,9 @@ class RPA:
             rpa_logger.log_action("PASO 4.5: Haciendo clic en botón de Orden de Ventas", "Clic ejecutado")
             pyautogui.click()
             time.sleep(3)
-            time.sleep(2)  # 2 segundos adicionales después de orden de venta
+            time.sleep(2)
             rpa_logger.log_action("PASO 4.5 COMPLETADO: Clic ejecutado exitosamente", "Esperando 5 segundos para carga (3+2)")
             
-            # 5. Capturar pantalla para verificar que se abrió correctamente
             rpa_logger.log_action("PASO 4.6: Capturando pantalla de verificación", "Guardando: sap_orden_de_ventas_template.png")
             pyautogui.screenshot("./rpa/vision/reference_images/sap_orden_de_ventas_template.png")
             rpa_logger.log_action("PASO 4.6 COMPLETADO: Captura de pantalla guardada", "Verificación completada")
@@ -536,11 +743,9 @@ class RPA:
                     window.activate()
                     smart_sleep('window_activation')
                 
-                # Verificamos que la ventana esté realmente activa
                 if not window.isActive:
                     raise Exception('No se pudo activar la ventana del escritorio remoto')
                 
-                # Maximizar la ventana del escritorio remoto
                 try:
                     rpa_logger.log_action("Maximizando ventana del escritorio remoto", "Win + Flecha Arriba")
                     pyautogui.hotkey('win', 'up')
@@ -549,7 +754,6 @@ class RPA:
                 except Exception as maximize_error:
                     rpa_logger.warning(f'Error al maximizar ventana: {str(maximize_error)} (continuando)')
                 
-                # Verificar con captura de pantalla
                 screenshot = pyautogui.screenshot("./rpa/vision/reference_images/remote_desktop.png")
                 if not screenshot:
                     raise Exception('No se pudo tomar captura de pantalla del escritorio remoto')
@@ -558,7 +762,7 @@ class RPA:
                 return window
                 
             except Exception as e:
-                if attempt == max_retries - 1:  # Último intento
+                if attempt == max_retries - 1:
                     raise Exception(f'Error crítico en conexión RDP después de {max_retries} intentos: {str(e)}')
                 else:
                     rpa_logger.warning(f'Error en conexión RDP (intento {attempt + 1}): {str(e)}. Reintentando...')
@@ -576,77 +780,7 @@ class RPA:
         time.sleep(10)
         rpa_logger.log_action("Aplicación de escritorio remoto abierta", "Lista para conexión")
 
-    def run(self):
-        start_time = time.time()
-        rpa_logger.log_action("Iniciando proceso RPA", "Procesamiento de archivos JSON")
-        
-        directory = './data/outputs_json'
-        try:
-            # Filtrar solo archivos JSON, excluyendo directorios y archivos temporales
-            files = [f for f in os.listdir(directory) 
-                    if os.path.isfile(os.path.join(directory, f))  # Solo archivos, no directorios
-                    and f.endswith('.json')  # Solo archivos JSON
-                    and not f.startswith('.')  # No archivos ocultos
-                    and not f.endswith('.tmp')]  # No archivos temporales
-            
-            if len(files) == 0:
-                rpa_logger.log_action("No hay archivos JSON disponibles para procesar", f"Directorio: {directory}")
-                rpa_logger.log_action("Buscando archivos en directorio", f"Contenido: {os.listdir(directory)}")
-                rpa_logger.info('No hay archivos para procesar. Esperando próxima ejecución')
-                return
-            
-            rpa_logger.log_action(f"Archivos JSON encontrados para procesar", f"Total: {len(files)} archivos")
-            rpa_logger.log_action("Lista de archivos encontrados", f"Archivos: {files}")
-            
-            for i, file in enumerate(files, 1):
-                file_start_time = time.time()
-                rpa_logger.log_action(f"Procesando archivo {i}/{len(files)}", f"Archivo: {file}")
-                
-                try:
-                    with open(f'{directory}/{file}') as f:
-                        data = json.load(f)
-                    
-                    rpa_logger.log_action("Archivo JSON cargado exitosamente", f"Archivo: {file}")
-                    
-                    # PASO 1: Conectar al escritorio remoto y maximizar ventana
-                    rpa_logger.log_action("PASO 1: Conectando al escritorio remoto", f"Archivo: {file}")
-                    if not self.get_remote_desktop():
-                        rpa_logger.log_error(f'No se pudo conectar al escritorio remoto para el archivo {file}', 'Error en conexión RDP')
-                        continue
-                    
-                    # PASO 2: Abrir SAP orden de ventas y verificar que se abrió correctamente
-                    rpa_logger.log_action("PASO 2: Abriendo SAP orden de ventas", f"Archivo: {file}")
-                    if not self.open_sap_orden_de_ventas():
-                        rpa_logger.log_error(f'No se pudo abrir SAP orden de ventas para el archivo {file}', 'Error en navegación')
-                        continue
-                    
-                    self.data_loader(data, file)
-                    time.sleep(1)
-                    # self.cancel_order()
-                    time.sleep(1)
-                    # json_parser.move_json_to_processed(file)
-                    
-                    file_duration = time.time() - file_start_time
-                    rpa_logger.log_performance(f"Archivo {file} procesado", file_duration)
-                    rpa_logger.log_action(f"Archivo {file} procesado exitosamente", f"Archivo: {file}")
-                    
-                except json.JSONDecodeError as e:
-                    rpa_logger.log_error(f'Error decodificando archivo JSON {file}: {str(e)}', f"Archivo: {file}")
-                    continue
-                except Exception as e:
-                    rpa_logger.log_error(f'Error procesando archivo {file}: {str(e)}', f"Archivo: {file}")
-                    continue
-            
-            total_duration = time.time() - start_time
-            rpa_logger.log_performance("Proceso RPA completado", total_duration)
-            rpa_logger.log_action("RPA finalizado exitosamente", f"Archivos procesados: {len(files)}")
-            
-        except Exception as e:
-            rpa_logger.log_error(f'Error accediendo al directorio {directory}: {str(e)}', f"Directorio: {directory}")
-            return
 
 if __name__ == "__main__":
-    rpa = RPA()
-    # CORRECCIÓN: Removido close_sap() automático para evitar "x" extra
-    # close_sap() solo se debe ejecutar manualmente cuando sea necesario
-    # rpa.close_sap()  # Comentado para evitar "x" extra
+    rpa = RPAWithStateMachine()
+    rpa.run()

@@ -27,7 +27,7 @@ delays:
   after_quantity: 2.0
   
   # Esperas para carga de sistemas
-  sap_startup: 30.0
+  sap_startup: 25.0
   sap_double_click: 10.0
   screenshot_wait: 1.0
   navigation_wait: 2.0

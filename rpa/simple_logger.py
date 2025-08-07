@@ -72,31 +72,51 @@ class SimpleRPALogger:
     def info(self, message, context=None):
         """Registra mensaje de información"""
         if context:
-            message = f"{message} | Context: {context}"
+            if isinstance(context, dict):
+                context_str = " | ".join([f"{k}: {v}" for k, v in context.items()])
+            else:
+                context_str = str(context)
+            message = f"{message} | Context: {context_str}"
         self.logger.info(message)
     
     def debug(self, message, context=None):
         """Registra mensaje de debug"""
         if context:
-            message = f"{message} | Context: {context}"
+            if isinstance(context, dict):
+                context_str = " | ".join([f"{k}: {v}" for k, v in context.items()])
+            else:
+                context_str = str(context)
+            message = f"{message} | Context: {context_str}"
         self.logger.debug(message)
     
     def warning(self, message, context=None):
         """Registra mensaje de advertencia"""
         if context:
-            message = f"{message} | Context: {context}"
+            if isinstance(context, dict):
+                context_str = " | ".join([f"{k}: {v}" for k, v in context.items()])
+            else:
+                context_str = str(context)
+            message = f"{message} | Context: {context_str}"
         self.logger.warning(message)
     
     def error(self, message, context=None):
         """Registra mensaje de error"""
         if context:
-            message = f"{message} | Context: {context}"
+            if isinstance(context, dict):
+                context_str = " | ".join([f"{k}: {v}" for k, v in context.items()])
+            else:
+                context_str = str(context)
+            message = f"{message} | Context: {context_str}"
         self.logger.error(message)
     
     def critical(self, message, context=None):
         """Registra mensaje crítico"""
         if context:
-            message = f"{message} | Context: {context}"
+            if isinstance(context, dict):
+                context_str = " | ".join([f"{k}: {v}" for k, v in context.items()])
+            else:
+                context_str = str(context)
+            message = f"{message} | Context: {context_str}"
         self.logger.critical(message)
     
     def log_action(self, action, details=None):
@@ -110,7 +130,10 @@ class SimpleRPALogger:
         """Método específico para logging de errores"""
         error_context = {'error': str(error), 'timestamp': datetime.now().isoformat()}
         if context:
-            error_context.update(context)
+            if isinstance(context, dict):
+                error_context.update(context)
+            else:
+                error_context['context'] = str(context)
         self.error(f"ERROR: {error}", error_context)
     
     def log_performance(self, operation, duration):

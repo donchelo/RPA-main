@@ -1,32 +1,44 @@
 import schedule
 import time
 import os
-from rpa.main import RPA
+from rpa.rpa_with_state_machine import RPAWithStateMachine
+from rpa.simple_logger import rpa_logger
 import logging
 
 # Configurar logging
 logging.basicConfig(filename='logs.log', level=logging.INFO, format='%(asctime)s %(levelname)s %(name)s %(message)s')
 
 def run_rpa_task():
-    """Ejecuta el proceso RPA para automatizar SAP"""
-    logging.info('Iniciando proceso RPA')
-    print('Iniciando proceso RPA...')
-
-    rpa = RPA()
-    max_retries = 3
+    """Ejecuta el proceso RPA con máquina de estados para automatizar SAP"""
+    logging.info('Iniciando proceso RPA con máquina de estados')
+    print('Iniciando proceso RPA con máquina de estados...')
     
-    for i in range(max_retries):
-        if rpa.open_sap():
-            rpa.run()
-            break
-        else:
-            print(f"Error al abrir SAP. Reintentando... ({i+1}/{max_retries})")
-            logging.warning(f"Error al abrir SAP. Intento {i+1}/{max_retries}")
-            time.sleep(10)
+    rpa_logger.log_action("=== INICIO DE CICLO RPA ===", "Sistema iniciando procesamiento")
+
+    try:
+        rpa = RPAWithStateMachine()
+        
+        # El método run() maneja internamente toda la lógica de reintentos
+        # usando la máquina de estados
+        rpa.run()
+        
+        # Obtener información final del estado
+        state_info = rpa.get_state_info()
+        rpa_logger.log_action(
+            "Ciclo RPA completado", 
+            f"Estado final: {state_info['current_state']}"
+        )
+        
+    except Exception as e:
+        error_msg = f"Error crítico en el sistema RPA: {str(e)}"
+        logging.error(error_msg)
+        rpa_logger.log_error(error_msg, "Error en ciclo principal")
+        print(f"Error crítico: {e}")
     
     logging.info('Proceso RPA completado, esperando próxima ejecución en 10 minutos')
     print('Proceso RPA completado, esperando próxima ejecución en 10 minutos')
     print('Sistema RPA en espera - monitoreando nuevos archivos JSON...')
+    rpa_logger.log_action("=== FIN DE CICLO RPA ===", "Sistema en espera para próximo ciclo")
 
 print("=== SISTEMA RPA TAMAPRINT ===")
 print("Iniciando sistema de automatización RPA para SAP...")
