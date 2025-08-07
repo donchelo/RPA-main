@@ -19,6 +19,7 @@ class RPAState(Enum):
     LOADING_ITEMS = "loading_items"
     TAKING_SCREENSHOT = "taking_screenshot"
     MOVING_JSON = "moving_json"
+    POSITIONING_MOUSE = "positioning_mouse"
     COMPLETED = "completed"
     ERROR = "error"
     RETRYING = "retrying"
@@ -45,6 +46,8 @@ class RPAEvent(Enum):
     SCREENSHOT_FAILED = "screenshot_failed"
     JSON_MOVED = "json_moved"
     JSON_FAILED = "json_failed"
+    MOUSE_POSITIONED = "mouse_positioned"
+    MOUSE_POSITION_FAILED = "mouse_position_failed"
     PROCESS_COMPLETED = "process_completed"
     ERROR_OCCURRED = "error_occurred"
     RETRY = "retry"
@@ -131,8 +134,13 @@ class StateMachine:
             },
             
             RPAState.MOVING_JSON: {
-                RPAEvent.JSON_MOVED: RPAState.COMPLETED,
+                RPAEvent.JSON_MOVED: RPAState.POSITIONING_MOUSE,
                 RPAEvent.JSON_FAILED: RPAState.ERROR,
+            },
+            
+            RPAState.POSITIONING_MOUSE: {
+                RPAEvent.MOUSE_POSITIONED: RPAState.COMPLETED,
+                RPAEvent.MOUSE_POSITION_FAILED: RPAState.ERROR,
             },
             
             RPAState.ERROR: {

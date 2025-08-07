@@ -65,6 +65,9 @@ class RPAWithStateMachine:
             RPAState.MOVING_JSON, self.state_handlers.handle_moving_json
         )
         self.state_machine.register_state_handler(
+            RPAState.POSITIONING_MOUSE, self.state_handlers.handle_positioning_mouse
+        )
+        self.state_machine.register_state_handler(
             RPAState.COMPLETED, self.state_handlers.handle_completed_state
         )
         self.state_machine.register_state_handler(
@@ -581,6 +584,64 @@ class RPAWithStateMachine:
             rpa_logger.log_error("Validación fallida para Make.com", f"Status: {validation_result}")
         
         return validation_result
+
+    def position_mouse_on_agregar_button(self):
+        """Posiciona el mouse en la esquina inferior derecha del botón 'Agregar y'"""
+        start_time = time.time()
+        rpa_logger.log_action("Iniciando posicionamiento del mouse", "Buscando botón 'Agregar y'")
+        
+        try:
+            # Cargar la imagen del botón "Agregar y"
+            import cv2
+            template_path = os.path.join(os.path.dirname(__file__), 'vision', 'reference_images', 'agregar_y_button.png')
+            
+            if not os.path.exists(template_path):
+                rpa_logger.log_error(f"Imagen de referencia no encontrada: {template_path}", "Archivo faltante")
+                return False
+            
+            agregar_button_image = cv2.imread(template_path, cv2.IMREAD_COLOR)
+            if agregar_button_image is None:
+                rpa_logger.log_error("No se pudo cargar la imagen de referencia", "Error de lectura de imagen")
+                return False
+            
+            # Buscar el botón usando template matching
+            rpa_logger.log_action("Buscando botón 'Agregar y'", "Usando template matching")
+            from rpa.vision.template_matcher import template_matcher
+            coordinates = template_matcher.find_template(agregar_button_image, confidence=0.8)
+            
+            if not coordinates:
+                rpa_logger.log_error("No se pudo encontrar el botón 'Agregar y'", "Template matching falló")
+                return False
+                
+            if not isinstance(coordinates, tuple) or len(coordinates) != 2:
+                rpa_logger.log_error(f"Coordenadas inválidas del botón: {coordinates}", "Formato de coordenadas incorrecto")
+                return False
+            
+            button_x, button_y = coordinates
+            rpa_logger.log_action("Botón 'Agregar y' encontrado", f"Coordenadas del centro: {coordinates}")
+            
+            # Obtener las dimensiones del template para calcular la esquina inferior derecha
+            template_height, template_width = agregar_button_image.shape[:2]
+            
+            # Calcular la esquina inferior derecha
+            # Las coordenadas devueltas por find_template son del centro del template
+            corner_x = button_x + (template_width // 2)
+            corner_y = button_y + (template_height // 2)
+            
+            rpa_logger.log_action("Calculando posición final", f"Esquina inferior derecha: ({corner_x}, {corner_y})")
+            
+            # Mover el mouse a la esquina inferior derecha (sin hacer clic)
+            pyautogui.moveTo(corner_x, corner_y, duration=1.0)
+            
+            duration = time.time() - start_time
+            rpa_logger.log_performance("Posicionamiento de mouse en botón 'Agregar y'", duration)
+            rpa_logger.log_action("Mouse posicionado exitosamente", f"Posición final: ({corner_x}, {corner_y})")
+            
+            return True
+            
+        except Exception as e:
+            rpa_logger.log_error(f"Error al posicionar mouse en botón 'Agregar y': {str(e)}", "Error en posicionamiento")
+            return False
 
     def cancel_order(self):
         self.get_remote_desktop()

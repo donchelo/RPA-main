@@ -27,9 +27,9 @@ Se ha implementado una máquina de estados robusta para el sistema RPA que autom
 - `LOADING_ORDER`: Cargando orden de compra
 - `LOADING_DATE`: Cargando fecha de entrega
 - `LOADING_ITEMS`: Procesando todos los items
-- `SCROLLING_TO_TOTALS`: Desplazándose a totales
 - `TAKING_SCREENSHOT`: Capturando pantalla para validación
 - `MOVING_JSON`: Moviendo archivos a procesados
+- `POSITIONING_MOUSE`: Posicionando mouse en botón "Agregar y"
 - `COMPLETED`: Proceso completado exitosamente
 - `ERROR`: Estado de error con posibilidad de reintento
 - `RETRYING`: Reintentando después de error
@@ -77,12 +77,12 @@ LOADING_DATE
   ↓ DATE_LOADED / DATE_FAILED→ERROR
 LOADING_ITEMS
   ↓ ITEMS_LOADED / ITEMS_FAILED→ERROR
-SCROLLING_TO_TOTALS
-  ↓ SCROLLED_TO_TOTALS / SCROLL_FAILED→ERROR
 TAKING_SCREENSHOT
   ↓ SCREENSHOT_TAKEN / SCREENSHOT_FAILED→ERROR
 MOVING_JSON
   ↓ JSON_MOVED / JSON_FAILED→ERROR
+POSITIONING_MOUSE
+  ↓ MOUSE_POSITIONED / MOUSE_POSITION_FAILED→ERROR
 COMPLETED
 ```
 

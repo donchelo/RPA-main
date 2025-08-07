@@ -272,6 +272,32 @@ class RPAStateHandlers:
             rpa_logger.log_error(f"Error moviendo JSON: {str(e)}", f"Archivo: {context.current_file}")
             return RPAEvent.JSON_FAILED
 
+    def handle_positioning_mouse(self, context: StateContext, **kwargs) -> RPAEvent:
+        """Maneja el posicionamiento del mouse en el botón 'Agregar y'"""
+        start_time = time.time()
+        rpa_logger.log_action(
+            f"ESTADO: Posicionando mouse en botón 'Agregar y'",
+            f"Archivo: {context.current_file}"
+        )
+        
+        try:
+            # Posicionar mouse en la esquina inferior derecha del botón "Agregar y"
+            success = self.rpa.position_mouse_on_agregar_button()
+            
+            if success:
+                duration = time.time() - start_time
+                rpa_logger.log_performance("Posicionamiento del mouse", duration)
+                context.processing_stats['mouse_position_time'] = duration
+                rpa_logger.log_action("Mouse posicionado correctamente en botón 'Agregar y'", f"Archivo: {context.current_file}")
+                return RPAEvent.MOUSE_POSITIONED
+            else:
+                rpa_logger.log_error("Falló el posicionamiento del mouse", f"Archivo: {context.current_file}")
+                return RPAEvent.MOUSE_POSITION_FAILED
+                
+        except Exception as e:
+            rpa_logger.log_error(f"Error posicionando mouse: {str(e)}", f"Archivo: {context.current_file}")
+            return RPAEvent.MOUSE_POSITION_FAILED
+
     def handle_completed_state(self, context: StateContext, **kwargs) -> Optional[RPAEvent]:
         """Maneja el estado de proceso completado"""
         # Calcular y loggear estadísticas finales
