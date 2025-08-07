@@ -1,0 +1,21 @@
+{
+  "current_file": "460132850113120954R730-9008516551-7001-05001.pdf.json",
+  "current_state": "completed",
+  "retry_count": 0,
+  "max_retries": 3,
+  "error_message": null,
+  "last_successful_state": "connecting_remote_desktop",
+  "timestamp": 1754582622.9169066,
+  "processing_stats": {
+    "remote_desktop_time": 3.8078536987304688,
+    "sap_open_time": 40.960174560546875,
+    "navigation_time": 11.683638095855713,
+    "nit_load_time": 10.833313703536987,
+    "order_load_time": 8.019027471542358,
+    "date_load_time": 8.027987003326416,
+    "items_load_time": 16.72286295890808,
+    "items_count": 1,
+    "screenshot_time": 1.0976593494415283,
+    "json_move_time": 0.0030982494354248047
+  }
+}

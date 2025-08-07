@@ -1,6 +1,8 @@
 from enum import Enum
 from typing import Dict, Optional, Callable, Any
 import time
+import json
+import os
 from dataclasses import dataclass
 from .simple_logger import rpa_logger
 
@@ -61,6 +63,8 @@ class StateContext:
     start_time: Optional[float] = None
     last_successful_state: Optional[RPAState] = None
     processing_stats: Dict[str, Any] = None
+    checkpoint_file: Optional[str] = None
+    last_completed_state: Optional[RPAState] = None
 
     def __post_init__(self):
         if self.processing_stats is None:
@@ -204,6 +208,13 @@ class StateMachine:
                 except Exception as e:
                     rpa_logger.log_error(f"Error en callback de entrada del estado {new_state.value}: {str(e)}")
 
+            # Guardar checkpoint después de transiciones exitosas (excepto errores)
+            if new_state not in [RPAState.ERROR, RPAState.IDLE]:
+                self.save_checkpoint()
+                # Actualizar último estado completado exitosamente
+                if new_state != RPAState.RETRYING:
+                    self.context.last_completed_state = new_state
+
             return True
             
         except Exception as e:
@@ -313,3 +324,84 @@ class StateMachine:
             )
         
         return self.trigger_event(RPAEvent.PROCESS_COMPLETED)
+
+    def save_checkpoint(self):
+        """Guarda el estado actual en un archivo de checkpoint"""
+        if not self.context.current_file:
+            return False
+            
+        checkpoint_data = {
+            'current_file': self.context.current_file,
+            'current_state': self.current_state.value,
+            'retry_count': self.context.retry_count,
+            'max_retries': self.context.max_retries,
+            'error_message': self.context.error_message,
+            'last_successful_state': self.context.last_successful_state.value if self.context.last_successful_state else None,
+            'timestamp': time.time(),
+            'processing_stats': self.context.processing_stats
+        }
+        
+        try:
+            checkpoint_file = f"checkpoint_{os.path.basename(self.context.current_file)}.json"
+            self.context.checkpoint_file = checkpoint_file
+            
+            with open(checkpoint_file, 'w') as f:
+                json.dump(checkpoint_data, f, indent=2)
+                
+            rpa_logger.log_action("Checkpoint guardado", f"Estado: {self.current_state.value}, Archivo: {checkpoint_file}")
+            return True
+            
+        except Exception as e:
+            rpa_logger.log_error(f"Error guardando checkpoint: {str(e)}")
+            return False
+
+    def try_resume_from_checkpoint(self, file_name: str) -> bool:
+        """Intenta resumir procesamiento desde un checkpoint existente"""
+        checkpoint_file = f"checkpoint_{os.path.basename(file_name)}.json"
+        
+        if not os.path.exists(checkpoint_file):
+            return False
+            
+        try:
+            with open(checkpoint_file, 'r') as f:
+                checkpoint_data = json.load(f)
+            
+            # Validar que el checkpoint no sea muy viejo (más de 1 hora)
+            if time.time() - checkpoint_data['timestamp'] > 3600:
+                rpa_logger.log_action("Checkpoint expirado, iniciando proceso completo", f"Archivo: {checkpoint_file}")
+                os.remove(checkpoint_file)
+                return False
+            
+            # Restaurar estado desde checkpoint
+            self.current_state = RPAState(checkpoint_data['current_state'])
+            self.context.current_file = checkpoint_data['current_file']
+            self.context.retry_count = checkpoint_data['retry_count']
+            self.context.max_retries = checkpoint_data['max_retries']
+            self.context.error_message = checkpoint_data['error_message']
+            self.context.processing_stats = checkpoint_data.get('processing_stats', {})
+            self.context.checkpoint_file = checkpoint_file
+            
+            if checkpoint_data.get('last_successful_state'):
+                self.context.last_successful_state = RPAState(checkpoint_data['last_successful_state'])
+            
+            rpa_logger.log_action(
+                "Checkpoint restaurado exitosamente", 
+                f"Estado: {self.current_state.value}, Archivo: {file_name}"
+            )
+            return True
+            
+        except Exception as e:
+            rpa_logger.log_error(f"Error restaurando checkpoint: {str(e)}")
+            # Eliminar checkpoint corrupto
+            if os.path.exists(checkpoint_file):
+                os.remove(checkpoint_file)
+            return False
+
+    def cleanup_checkpoint(self):
+        """Limpia el archivo de checkpoint después de completar el proceso"""
+        if self.context.checkpoint_file and os.path.exists(self.context.checkpoint_file):
+            try:
+                os.remove(self.context.checkpoint_file)
+                rpa_logger.log_action("Checkpoint limpiado", f"Archivo: {self.context.checkpoint_file}")
+            except Exception as e:
+                rpa_logger.log_error(f"Error limpiando checkpoint: {str(e)}")
