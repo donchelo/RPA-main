@@ -9,13 +9,27 @@ import glob
 from datetime import datetime
 import queue
 import time
+from PIL import Image, ImageTk
+import webbrowser
 
 class RPALauncher:
     def __init__(self):
         self.root = tk.Tk()
-        self.root.title("🤖 Launcher RPA TAMAPRINT")
+        self.root.title("🤖 AI4U | Launcher RPA TAMAPRINT")
         self.root.geometry("800x600")
         self.root.resizable(True, True)
+        
+        # Branding AI4U (rutas opcionales)
+        self.brand_name = "AI4U"
+        self.brand_tagline = "Automatización Inteligente para Ti!"
+        self.brand_email = "hola@ai4u.com.co"
+        self.brand_logo_path = os.path.join("assets", "ai4u_logo.png")
+        self.brand_banner_path = os.path.join("assets", "ai4u_banner.png")
+        self.brand_icon_path = os.path.join("assets", "ai4u.ico")
+        self._image_refs = {}
+        
+        # Icono de la ventana si está disponible
+        self._set_window_icon()
         
         # Variables de estado
         self.rpa_process = None
@@ -37,15 +51,59 @@ class RPALauncher:
     def create_widgets(self):
         # Título principal
         title_frame = ttk.Frame(self.root)
-        title_frame.pack(pady=20)
+        title_frame.pack(pady=(12, 8), fill=tk.X)
         
-        title_label = ttk.Label(title_frame, text="🤖 Sistema RPA TAMAPRINT", 
-                               font=("Arial", 20, "bold"))
-        title_label.pack()
+        # Menú superior (Ayuda)
+        self._create_menubar()
         
-        subtitle_label = ttk.Label(title_frame, text="Automatización de Órdenes SAP Business One", 
-                                  font=("Arial", 12))
-        subtitle_label.pack(pady=(5, 0))
+        # Intentar cargar banner o logo
+        banner_photo = None
+        if os.path.exists(self.brand_banner_path):
+            banner_photo = self._load_image(self.brand_banner_path, max_size=(340, 80))
+        logo_photo = None
+        if banner_photo is None and os.path.exists(self.brand_logo_path):
+            logo_photo = self._load_image(self.brand_logo_path, max_size=(80, 80))
+        
+        if banner_photo is not None:
+            self._image_refs['banner_photo'] = banner_photo
+            banner_label = ttk.Label(title_frame, image=banner_photo)
+            banner_label.pack(side=tk.LEFT, padx=(0, 12))
+        elif logo_photo is not None:
+            self._image_refs['logo_photo'] = logo_photo
+            logo_label = ttk.Label(title_frame, image=logo_photo)
+            logo_label.pack(side=tk.LEFT, padx=(0, 12))
+        
+        # Bloque de textos de marca
+        title_text_frame = ttk.Frame(title_frame)
+        title_text_frame.pack(side=tk.LEFT, fill=tk.X, expand=True)
+        
+        title_label = ttk.Label(
+            title_text_frame,
+            text=f"{self.brand_name} · Sistema RPA TAMAPRINT",
+            font=("Arial", 20, "bold")
+        )
+        title_label.pack(anchor=tk.W)
+        
+        subtitle_label = ttk.Label(
+            title_text_frame,
+            text="Automatización de Órdenes SAP Business One",
+            font=("Arial", 12)
+        )
+        subtitle_label.pack(anchor=tk.W, pady=(2, 0))
+        
+        tagline_label = ttk.Label(
+            title_text_frame,
+            text=self.brand_tagline,
+            font=("Arial", 11, "italic")
+        )
+        tagline_label.pack(anchor=tk.W, pady=(2, 0))
+        
+        # Correo clicable
+        self._add_link_label(
+            title_text_frame,
+            text=self.brand_email,
+            command=self._open_email
+        ).pack(anchor=tk.W, pady=(4, 0))
         
         # Frame principal
         main_frame = ttk.Frame(self.root)
@@ -116,6 +174,9 @@ class RPALauncher:
         
         ttk.Button(log_buttons_frame, text="📁 Abrir Carpeta Logs", 
                   command=self.open_logs_folder).pack(side=tk.LEFT)
+        
+        # Barra inferior de marca
+        self._create_brand_footer()
     
     def log_message(self, message, level="INFO"):
         timestamp = datetime.now().strftime("%H:%M:%S")
@@ -362,6 +423,74 @@ class RPALauncher:
         
         # Iniciar loop principal
         self.root.mainloop()
+
+    # === Utilidades de branding ===
+    def _set_window_icon(self):
+        try:
+            if os.path.exists(self.brand_icon_path):
+                # Preferir .ico en Windows
+                self.root.iconbitmap(self.brand_icon_path)
+                return
+        except Exception:
+            pass
+        # Fallback: si hay logo PNG, usarlo como icono
+        try:
+            if os.path.exists(self.brand_logo_path):
+                icon_img = self._load_image(self.brand_logo_path, max_size=(32, 32))
+                if icon_img is not None:
+                    self._image_refs['icon_img'] = icon_img
+                    self.root.iconphoto(True, icon_img)
+        except Exception:
+            pass
+
+    def _load_image(self, path: str, max_size=(72, 72)):
+        """Carga una imagen y la reescala manteniendo relación de aspecto."""
+        try:
+            img = Image.open(path).convert("RGBA")
+            img.thumbnail(max_size, Image.LANCZOS)
+            return ImageTk.PhotoImage(img)
+        except Exception:
+            return None
+
+    def _add_link_label(self, parent, text: str, command):
+        label = tk.Label(parent, text=text, fg="#1E6BF1", cursor="hand2", font=("Arial", 10, "underline"))
+        label.bind("<Button-1>", lambda e: command())
+        label.bind("<Enter>", lambda e: label.config(fg="#0B53D6"))
+        label.bind("<Leave>", lambda e: label.config(fg="#1E6BF1"))
+        return label
+
+    def _open_email(self):
+        try:
+            webbrowser.open(f"mailto:{self.brand_email}?subject=Soporte%20RPA%20{self.brand_name}")
+        except Exception:
+            messagebox.showinfo("Contacto", f"Escríbenos a: {self.brand_email}")
+
+    def _create_menubar(self):
+        menubar = tk.Menu(self.root)
+        help_menu = tk.Menu(menubar, tearoff=0)
+        help_menu.add_command(label="Acerca de AI4U", command=self._show_about)
+        help_menu.add_command(label="Contacto", command=self._open_email)
+        menubar.add_cascade(label="Ayuda", menu=help_menu)
+        self.root.config(menu=menubar)
+
+    def _show_about(self):
+        message = (
+            f"{self.brand_name} — {self.brand_tagline}\n\n"
+            "Automatizamos procesos en SAP Business One con RPA, visión por computadora y OCR.\n\n"
+            f"Contacto: {self.brand_email}"
+        )
+        messagebox.showinfo("Acerca de AI4U", message)
+
+    def _create_brand_footer(self):
+        sep = ttk.Separator(self.root, orient=tk.HORIZONTAL)
+        sep.pack(fill=tk.X, pady=(6, 0))
+        footer = ttk.Frame(self.root)
+        footer.pack(fill=tk.X, pady=(4, 8))
+        left = ttk.Label(footer, text=f"{self.brand_name} · {self.brand_tagline}", font=("Arial", 10))
+        left.pack(side=tk.LEFT)
+        right_container = ttk.Frame(footer)
+        right_container.pack(side=tk.RIGHT)
+        self._add_link_label(right_container, self.brand_email, self._open_email).pack(side=tk.RIGHT)
 
 if __name__ == "__main__":
     app = RPALauncher()
