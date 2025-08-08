@@ -23,7 +23,7 @@ delays:
   after_nit: 2.0
   after_order: 1.0  
   after_date: 1.0
-  after_item_code: 3.0
+  after_item_code: 2.0
   after_quantity: 2.0
   
   # Esperas para carga de sistemas
@@ -105,7 +105,7 @@ ocr:
 system:
   main_loop_interval: 10  # segundos entre verificaciones
   schedule_interval: 10   # minutos entre ejecuciones programadas
-  error_recovery_wait: 30 # segundos de espera tras error
+  error_recovery_wait: 20 # segundos de espera tras error
   
 # === MENSAJES DEL SISTEMA ===
 messages:
