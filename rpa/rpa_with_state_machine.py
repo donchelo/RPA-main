@@ -623,12 +623,15 @@ class RPAWithStateMachine:
             # Obtener las dimensiones del template para calcular la esquina inferior derecha
             template_height, template_width = agregar_button_image.shape[:2]
             
-            # Calcular la esquina inferior derecha
+            # Calcular la esquina inferior derecha DENTRO del botón
             # Las coordenadas devueltas por find_template son del centro del template
-            corner_x = button_x + (template_width // 2)
-            corner_y = button_y + (template_height // 2)
+            # Aplicamos un margen de seguridad para que la punta del mouse quede dentro del botón
+            margin = 8  # Píxeles de margen desde el borde del botón
+            corner_x = button_x + (template_width // 2) - margin
+            corner_y = button_y + (template_height // 2) - margin
             
-            rpa_logger.log_action("Calculando posición final", f"Esquina inferior derecha: ({corner_x}, {corner_y})")
+            rpa_logger.log_action("Calculando posición final", f"Dimensiones template: {template_width}x{template_height}, Margen: {margin}px")
+            rpa_logger.log_action("Posición dentro del botón", f"Esquina inferior derecha: ({corner_x}, {corner_y})")
             
             # Mover el mouse a la esquina inferior derecha (sin hacer clic)
             pyautogui.moveTo(corner_x, corner_y, duration=1.0)

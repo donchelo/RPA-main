@@ -5,18 +5,18 @@
   "max_retries": 3,
   "error_message": null,
   "last_successful_state": "connecting_remote_desktop",
-  "timestamp": 1754593582.0506701,
+  "timestamp": 1754623602.7584565,
   "processing_stats": {
-    "remote_desktop_time": 3.7363767623901367,
-    "sap_open_time": 40.93439340591431,
-    "navigation_time": 11.649448871612549,
-    "nit_load_time": 10.831424474716187,
-    "order_load_time": 8.029965877532959,
-    "date_load_time": 8.036037683486938,
-    "items_load_time": 16.729114770889282,
+    "remote_desktop_time": 19.744297742843628,
+    "sap_open_time": 40.85761260986328,
+    "navigation_time": 11.681643962860107,
+    "nit_load_time": 10.816232919692993,
+    "order_load_time": 8.022245645523071,
+    "date_load_time": 8.03103256225586,
+    "items_load_time": 16.72574210166931,
     "items_count": 1,
-    "screenshot_time": 1.084934949874878,
-    "json_move_time": 0.0011515617370605469,
-    "mouse_position_time": 1.3621697425842285
+    "screenshot_time": 1.0947434902191162,
+    "json_move_time": 0.0019228458404541016,
+    "mouse_position_time": 1.3535776138305664
   }
 }
