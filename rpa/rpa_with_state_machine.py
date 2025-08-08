@@ -633,12 +633,52 @@ class RPAWithStateMachine:
             rpa_logger.log_action("Calculando posición final", f"Dimensiones template: {template_width}x{template_height}, Margen: {margin}px")
             rpa_logger.log_action("Posición dentro del botón", f"Esquina inferior derecha: ({corner_x}, {corner_y})")
             
-            # Mover el mouse a la esquina inferior derecha (sin hacer clic)
+            # Mover el mouse a la esquina inferior derecha del botón "Agregar y"
             pyautogui.moveTo(corner_x, corner_y, duration=1.0)
+            rpa_logger.log_action("Mouse posicionado en botón 'Agregar y'", f"Posición: ({corner_x}, {corner_y})")
+            
+            # Hacer clic en el botón "Agregar y"
+            smart_sleep('short')
+            pyautogui.click()
+            rpa_logger.log_action("Clic ejecutado en botón 'Agregar y'", "Esperando apertura de minipantalla")
+            
+            # Esperar a que se abra la minipantalla
+            smart_sleep('medium')  # Espera adicional para la minipantalla
+            time.sleep(2)  # Espera extra para asegurar que la minipantalla esté completamente cargada
+            
+            # Buscar el botón específico "Agregar y cerrar" en la minipantalla
+            popup_template_path = os.path.join(os.path.dirname(__file__), 'vision', 'reference_images', 'sap_popup_agregar_y_cerrar.png')
+            
+            if not os.path.exists(popup_template_path):
+                rpa_logger.log_error(f"Imagen de referencia del botón 'Agregar y cerrar' no encontrada: {popup_template_path}", "Archivo faltante")
+                return False
+            
+            popup_image = cv2.imread(popup_template_path, cv2.IMREAD_COLOR)
+            if popup_image is None:
+                rpa_logger.log_error("No se pudo cargar la imagen del botón 'Agregar y cerrar'", "Error de lectura de imagen")
+                return False
+            
+            rpa_logger.log_action("Buscando botón específico 'Agregar y cerrar'", "Usando imagen recortada del botón")
+            from rpa.vision.template_matcher import template_matcher
+            popup_coordinates = template_matcher.find_template(popup_image, confidence=0.8)
+            
+            if not popup_coordinates:
+                rpa_logger.log_error("No se pudo encontrar el botón 'Agregar y cerrar'", "Template matching falló")
+                return False
+                
+            if not isinstance(popup_coordinates, tuple) or len(popup_coordinates) != 2:
+                rpa_logger.log_error(f"Coordenadas inválidas del botón 'Agregar y cerrar': {popup_coordinates}", "Formato incorrecto")
+                return False
+            
+            popup_x, popup_y = popup_coordinates
+            rpa_logger.log_action("Botón 'Agregar y cerrar' encontrado", f"Coordenadas: {popup_coordinates}")
+            
+            # Posicionar mouse en el botón "Agregar y cerrar"
+            pyautogui.moveTo(popup_x, popup_y, duration=1.0)
             
             duration = time.time() - start_time
-            rpa_logger.log_performance("Posicionamiento de mouse en botón 'Agregar y'", duration)
-            rpa_logger.log_action("Mouse posicionado exitosamente", f"Posición final: ({corner_x}, {corner_y})")
+            rpa_logger.log_performance("Proceso completo: posicionamiento y clic en 'Agregar y'", duration)
+            rpa_logger.log_action("Mouse posicionado exitosamente en 'Agregar y cerrar'", f"Posición final: ({popup_x}, {popup_y})")
             
             return True
             
