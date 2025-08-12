@@ -1,8 +1,18 @@
-# Python
+# =============================================================================
+# .gitignore mejorado para Proyecto RPA
+# Siguiendo mejores prácticas para proyectos Python con automatización
+# =============================================================================
+
+# ===== PYTHON =====
+# Bytecode
 __pycache__/
 *.py[cod]
 *$py.class
+
+# C extensions
 *.so
+
+# Distribution / packaging
 .Python
 build/
 develop-eggs/
@@ -19,32 +29,217 @@ wheels/
 *.egg-info/
 .installed.cfg
 *.egg
+MANIFEST
 
-# Virtual Environment
+# PyInstaller
+*.manifest
+*.spec
+
+# ===== ENTORNOS VIRTUALES =====
 venv/
 env/
 ENV/
+.venv/
+.env/
+virtualenv/
 
-# IDE
-.idea/
-.vscode/
-*.swp
-*.swo
-
-# Logs
-*.log
-
-# Local configuration
+# ===== CONFIGURACIÓN Y SECRETOS =====
+# Variables de entorno
 .env
 .env.local
+.env.production
+.env.staging
+.env.development
 
-.env
-**venv**
-**/downloaded_pdfs/**/*.pdf
-**/downloaded_pdfs/**/*.PDF
-**/processed_pdfs/**/*.pdf
-**/processed_pdfs/**/*.PDF
-**/processed_txt/**/*.txt
-**/processed_json/**/*.json
-**/outputs_txt/*.txt
-**/outputs_json/*.json
+# Credenciales
+credentials.json
+**/credentials.json
+service-account*.json
+*.pem
+*.key
+
+# Configuración local
+config.local.*
+settings.local.*
+
+# ===== LOGS Y ARCHIVOS TEMPORALES =====
+# Logs
+*.log
+logs/
+rpa/logs/
+**/*.log
+
+# Archivos temporales
+*.tmp
+*.temp
+*.swp
+*.swo
+*~
+
+# ===== DATOS Y PROCESAMIENTO =====
+# Datos procesados y outputs (mantener estructura pero no contenido)
+data/outputs_json/*.json
+data/outputs_json/Procesados/
+data/processed_pdfs/
+data/downloaded_pdfs/
+data/processed_txt/
+data/outputs_txt/
+
+# Checkpoints y archivos de estado temporal
+checkpoint_*.json
+checkpoint_*.json.json
+*.checkpoint
+
+# ===== CAPTURAS Y SCREENSHOTS =====
+# Screenshots temporales y de debug
+**/reference_images/template.png
+**/reference_images/debug/
+screenshots/
+debug_screenshots/
+pre_click_confirmation_*.png
+
+# Capturas automáticas del sistema
+temp_screenshot_*.png
+validation_screenshot_*.png
+
+# ===== SISTEMA OPERATIVO =====
+# Windows
+desktop.ini
+Thumbs.db
+ehthumbs.db
+$RECYCLE.BIN/
+*.lnk
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+Icon?
+
+# Linux
+*~
+.fuse_hidden*
+.directory
+.Trash-*
+
+# ===== IDEs Y EDITORES =====
+# Visual Studio Code
+.vscode/
+*.code-workspace
+
+# PyCharm
+.idea/
+*.iws
+*.iml
+*.ipr
+
+# Sublime Text
+*.sublime-project
+*.sublime-workspace
+
+# Vim/Neovim
+*.swp
+*.swo
+*~
+
+# Emacs
+*~
+\#*\#
+/.emacs.desktop
+/.emacs.desktop.lock
+*.elc
+
+# ===== TESTING =====
+# Coverage reports
+htmlcov/
+.tox/
+.coverage
+.coverage.*
+.cache
+.pytest_cache/
+nosetests.xml
+coverage.xml
+*.cover
+.hypothesis/
+
+# ===== CACHE Y ARCHIVOS TEMPORALES DE APLICACIÓN =====
+# Cache de aplicaciones
+.cache/
+*.cache
+
+# Archivos temporales de PIL/Pillow
+.PIL/
+
+# Archivos temporales de OpenCV
+opencv_temp/
+
+# ===== ARCHIVOS ESPECÍFICOS DEL PROYECTO RPA =====
+# Ejecutables temporales
+*.exe.tmp
+ngrok.exe.tmp
+
+# Archivos de estado del RPA
+rpa_state_*.json
+current_processing.lock
+
+# Archivos de backup automático
+*.backup
+*.bak
+
+# ===== ARCHIVOS DE DOCUMENTACIÓN TEMPORAL =====
+# Documentación generada automáticamente
+docs/_build/
+site/
+
+# ===== DEPENDENCIAS Y PACKAGES =====
+# Dependency directories
+node_modules/
+jspm_packages/
+
+# ===== JUPYTER NOTEBOOKS =====
+# Jupyter Notebook checkpoints
+.ipynb_checkpoints
+*/.ipynb_checkpoints/*
+
+# ===== REPOSITORIOS ANIDADOS =====
+# Directorio external contiene repositorios independientes
+external/
+
+# ===== OTROS =====
+# Archivos NULL creados por comandos Windows
+NUL
+
+# Archivos de bloqueo
+*.lock
+!poetry.lock
+!pipfile.lock
+
+# Archivos grandes que no deberían estar en git
+*.iso
+*.dmg
+*.zip
+*.tar.gz
+*.tgz
+*.rar
+
+# Archivos de base de datos locales
+*.db
+*.sqlite
+*.sqlite3
+
+# =============================================================================
+# MANTENER ESTAS LÍNEAS AL FINAL
+# Archivos específicos que SÍ queremos trackear (override de reglas anteriores)
+# =============================================================================
+
+# Mantener archivos de referencia para RPA (imágenes necesarias para template matching)
+!rpa/vision/reference_images/*.png
+!rpa/vision/reference_images/*.jpg
+!rpa/vision/reference_images/*.jpeg
+
+# Mantener archivos de configuración base
+!config.yaml
+!requirements.txt
+
+# Mantener datos de test (pequeños)
+!test_data/*.json
