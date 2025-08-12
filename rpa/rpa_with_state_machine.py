@@ -586,9 +586,9 @@ class RPAWithStateMachine:
         return validation_result
 
     def position_mouse_on_agregar_button(self):
-        """Posiciona el mouse en la esquina inferior derecha del botón 'Agregar y'"""
+        """Posiciona el mouse en la esquina inferior derecha del botón 'Agregar y' con validación anti-error"""
         start_time = time.time()
-        rpa_logger.log_action("Iniciando posicionamiento del mouse", "Buscando botón 'Agregar y'")
+        rpa_logger.log_action("Iniciando posicionamiento del mouse", "Buscando botón 'Agregar y' con validación mejorada")
         
         try:
             # Cargar la imagen del botón "Agregar y"
@@ -604,13 +604,26 @@ class RPAWithStateMachine:
                 rpa_logger.log_error("No se pudo cargar la imagen de referencia", "Error de lectura de imagen")
                 return False
             
-            # Buscar el botón usando template matching
-            rpa_logger.log_action("Buscando botón 'Agregar y'", "Usando template matching")
+            # Cargar la imagen del botón "Agregar docum" (el que NO queremos presionar)
+            docum_template_path = os.path.join(os.path.dirname(__file__), 'vision', 'reference_images', 'sap_agregar_docum_button.png')
+            agregar_docum_image = None
+            
+            if os.path.exists(docum_template_path):
+                agregar_docum_image = cv2.imread(docum_template_path, cv2.IMREAD_COLOR)
+                if agregar_docum_image is not None:
+                    rpa_logger.log_action("Imagen anti-error cargada", "Template 'Agregar docum' disponible para validación")
+                else:
+                    rpa_logger.log_action("Advertencia: No se pudo cargar template anti-error", "Continuando sin validación negativa")
+            else:
+                rpa_logger.log_action("Advertencia: Template anti-error no encontrado", f"Archivo: {docum_template_path}")
+            
+            # Buscar el botón usando template matching con confianza aumentada
+            rpa_logger.log_action("Buscando botón 'Agregar y'", "Usando template matching con confianza 0.9")
             from rpa.vision.template_matcher import template_matcher
-            coordinates = template_matcher.find_template(agregar_button_image, confidence=0.8)
+            coordinates = template_matcher.find_template(agregar_button_image, confidence=0.9)
             
             if not coordinates:
-                rpa_logger.log_error("No se pudo encontrar el botón 'Agregar y'", "Template matching falló")
+                rpa_logger.log_error("No se pudo encontrar el botón 'Agregar y' con confianza 0.9", "Template matching falló")
                 return False
                 
             if not isinstance(coordinates, tuple) or len(coordinates) != 2:
@@ -620,17 +633,53 @@ class RPAWithStateMachine:
             button_x, button_y = coordinates
             rpa_logger.log_action("Botón 'Agregar y' encontrado", f"Coordenadas del centro: {coordinates}")
             
+            # VALIDACIÓN ANTI-ERROR: Verificar que no estemos sobre el botón incorrecto
+            if agregar_docum_image is not None:
+                rpa_logger.log_action("Ejecutando validación anti-error", "Verificando que no sea 'Agregar docum'")
+                
+                # Crear región de búsqueda alrededor de las coordenadas encontradas
+                search_margin = 50  # Píxeles de margen para buscar botón incorrecto
+                search_region = (
+                    max(0, button_x - search_margin),
+                    max(0, button_y - search_margin),
+                    search_margin * 2,
+                    search_margin * 2
+                )
+                
+                # Buscar botón incorrecto en la región
+                wrong_button_coords = template_matcher.find_template(
+                    agregar_docum_image, 
+                    confidence=0.7,
+                    search_region=search_region
+                )
+                
+                if wrong_button_coords:
+                    rpa_logger.log_error(
+                        f"¡PELIGRO! Botón 'Agregar docum' detectado cerca de las coordenadas objetivo",
+                        f"Botón incorrecto en: {wrong_button_coords}, Objetivo: {coordinates}"
+                    )
+                    return False
+                else:
+                    rpa_logger.log_action("✓ Validación anti-error exitosa", "No se detectó botón 'Agregar docum' en la zona")
+            
+            # Tomar screenshot de confirmación antes del clic
+            confirmation_screenshot_path = f"./logs/pre_click_confirmation_{int(time.time())}.png"
+            try:
+                confirmation_screenshot = pyautogui.screenshot()
+                confirmation_screenshot.save(confirmation_screenshot_path)
+                rpa_logger.log_action("Screenshot de confirmación guardado", f"Archivo: {confirmation_screenshot_path}")
+            except Exception as screenshot_error:
+                rpa_logger.log_error(f"No se pudo guardar screenshot de confirmación: {str(screenshot_error)}", "Continuando sin screenshot")
+            
             # Obtener las dimensiones del template para calcular la esquina inferior derecha
             template_height, template_width = agregar_button_image.shape[:2]
             
-            # Calcular la esquina inferior derecha DENTRO del botón
-            # Las coordenadas devueltas por find_template son del centro del template
-            # Aplicamos un margen de seguridad para que la punta del mouse quede dentro del botón
-            margin = 8  # Píxeles de margen desde el borde del botón
+            # Calcular la esquina inferior derecha DENTRO del botón con margen más conservador
+            margin = 12  # Píxeles de margen aumentado desde el borde del botón
             corner_x = button_x + (template_width // 2) - margin
             corner_y = button_y + (template_height // 2) - margin
             
-            rpa_logger.log_action("Calculando posición final", f"Dimensiones template: {template_width}x{template_height}, Margen: {margin}px")
+            rpa_logger.log_action("Calculando posición final", f"Dimensiones template: {template_width}x{template_height}, Margen seguro: {margin}px")
             rpa_logger.log_action("Posición dentro del botón", f"Esquina inferior derecha: ({corner_x}, {corner_y})")
             
             # Mover el mouse a la esquina inferior derecha del botón "Agregar y"
@@ -659,7 +708,6 @@ class RPAWithStateMachine:
                 return False
             
             rpa_logger.log_action("Buscando botón específico 'Agregar y cerrar'", "Usando imagen recortada del botón")
-            from rpa.vision.template_matcher import template_matcher
             popup_coordinates = template_matcher.find_template(popup_image, confidence=0.8)
             
             if not popup_coordinates:
@@ -677,7 +725,7 @@ class RPAWithStateMachine:
             pyautogui.moveTo(popup_x, popup_y, duration=1.0)
             
             duration = time.time() - start_time
-            rpa_logger.log_performance("Proceso completo: posicionamiento y clic en 'Agregar y'", duration)
+            rpa_logger.log_performance("Proceso completo: posicionamiento y clic en 'Agregar y' con validación", duration)
             rpa_logger.log_action("Mouse posicionado exitosamente en 'Agregar y cerrar'", f"Posición final: ({popup_x}, {popup_y})")
             
             return True

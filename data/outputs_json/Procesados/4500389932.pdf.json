@@ -1,0 +1,31 @@
+{
+  "orden_compra": "4500389932",
+  "fecha_entrega": "01/09/2025",
+  "comprador": {
+    "nit": "CN890924167",
+    "nombre": "C.I HERMECO S.A"
+  },
+  "items": [
+    {
+      "descripcion": "ETIQUETA SHOES 5X9.5CM MADE IN COLOMBIA 2025 PVP 272GR LAMINADO MATE SIN REPUJAR,PINTAR CON OJALETE GRIS PISTOLA",
+      "codigo": "201946",
+      "cantidad": 2000,
+      "precio_unitario": 178,
+      "precio_total": 356000,
+      "fecha_entrega": "01/09/2025"
+    },
+    {
+      "descripcion": "ETIQUETA SHOES 5X9.5CM MADE IN CHINA 2025 OFFCORSS",
+      "codigo": "201994",
+      "cantidad": 2000,
+      "precio_unitario": 178,
+      "precio_total": 356000,
+      "fecha_entrega": "01/09/2025"
+    }
+  ],
+  "Subtotal": 712000,
+  "IVA": 135280,
+  "Total": 847280,
+  "total_items_unicos": 2,
+  "numero_items_totales": 4000
+}

@@ -1,0 +1,7 @@
+# PLACEHOLDER - REEMPLAZAR CON IMAGEN REAL DEL BOTÓN "AGREGAR DOCUM"
+# Instrucciones:
+# 1. Ejecuta el RPA hasta llegar al punto donde aparecen ambos botones
+# 2. Toma un screenshot
+# 3. Recorta SOLO el botón "Agregar docum" (el que NO queremos presionar)
+# 4. Guárdalo como sap_agregar_docum_button.png
+# 5. Reemplaza este archivo placeholder con la imagen real
