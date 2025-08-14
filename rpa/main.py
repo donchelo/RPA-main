@@ -2,6 +2,7 @@ import pyautogui
 import time
 import os
 import json
+from datetime import datetime
 from rpa.vision.main import Vision
 from rpa.simple_logger import rpa_logger
 from rpa.smart_waits import smart_waits, adaptive_wait, smart_sleep
@@ -90,28 +91,41 @@ class RPA:
             rpa_logger.log_error(f"Error al cargar orden de compra: {str(e)}", f"Orden: {orden_compra}")
             raise
 
-    def load_fecha_entrega(self, fecha_entrega):
+    def load_fecha_entrega(self, fecha_entrega, fecha_documento=None):
         start_time = time.time()
-        rpa_logger.log_action("Iniciando carga de fecha de entrega", f"Fecha: {fecha_entrega}")
+        # Usar fecha_documento si está disponible, sino usar fecha_entrega
+        fecha_doc = fecha_documento if fecha_documento else fecha_entrega
+        rpa_logger.log_action("Iniciando carga de fechas", f"Entrega: {fecha_entrega} -> Documento: {fecha_doc}")
         
         try:
             smart_sleep('short')
             # Ya estamos posicionados en el campo después de los tabs desde orden de compra
+            # Fecha de entrega
             pyautogui.typewrite(fecha_entrega, interval=0.2)
             smart_sleep('after_input')
-            # CORRECCIÓN: Usar tabs configurables después de la fecha de entrega
-            tabs_count = get_navigation_tabs('after_date')
-            smart_waits.smart_tab_wait(tabs_count, "fecha_entrega")
-            for i in range(tabs_count):
+
+            # Un Tab hacia fecha de documento
+            pyautogui.hotkey('tab')
+            smart_sleep('after_tab')
+
+            # Fecha de documento (usar fecha_documento del JSON)
+            pyautogui.typewrite(fecha_doc, interval=0.2)
+            smart_sleep('after_input')
+
+            # Usar tabs configurables; restar 1 por el Tab que llevó al campo de documento
+            tabs_total = get_navigation_tabs('after_date')
+            remaining_tabs = max(tabs_total - 1, 0)
+            smart_waits.smart_tab_wait(remaining_tabs, "fecha_documento")
+            for i in range(remaining_tabs):
                 pyautogui.hotkey('tab')
                 smart_sleep('after_tab')
             
             duration = time.time() - start_time
-            rpa_logger.log_performance("Carga de fecha de entrega", duration)
-            rpa_logger.log_action("Fecha de entrega cargada exitosamente", f"Fecha: {fecha_entrega}")
+            rpa_logger.log_performance("Carga de fechas (entrega y documento)", duration)
+            rpa_logger.log_action("Fechas cargadas exitosamente", f"Entrega: {fecha_entrega}, Documento: {fecha_doc}")
             
         except Exception as e:
-            rpa_logger.log_error(f"Error al cargar fecha de entrega: {str(e)}", f"Fecha: {fecha_entrega}")
+            rpa_logger.log_error(f"Error al cargar fechas: {str(e)}", f"Entrega: {fecha_entrega}, Documento: {fecha_doc}")
             raise
 
     def load_items(self, items):
@@ -310,12 +324,40 @@ class RPA:
     def data_loader(self, data, filename):
         nit = data["comprador"]['nit']
         orden_compra = data['orden_compra']
-        fecha_entrega = data['fecha_entrega']
         items = data['items']
+
+        # Calcular fecha de entrega global como la última fecha entre cabecera e items
+        def _try_parse_date(date_str: str):
+            if not date_str:
+                return None
+            for fmt in ("%d/%m/%Y", "%Y-%m-%d"):
+                try:
+                    return datetime.strptime(date_str, fmt)
+                except Exception:
+                    pass
+            return None
+
+        candidates = []
+        if data.get('fecha_entrega'):
+            parsed = _try_parse_date(data['fecha_entrega'])
+            if parsed:
+                candidates.append((data['fecha_entrega'], parsed))
+        for it in items:
+            fe = it.get('fecha_entrega')
+            if fe:
+                parsed = _try_parse_date(fe)
+                if parsed:
+                    candidates.append((fe, parsed))
+        if not candidates:
+            raise ValueError("No se encontraron fechas de entrega válidas en el JSON")
+        fecha_entrega = max(candidates, key=lambda t: t[1])[0]
+
+        # Obtener fecha_documento del JSON, usar fecha_entrega como fallback
+        fecha_documento = data.get('fecha_documento', fecha_entrega)
 
         self.load_nit(nit)
         self.load_orden_compra(orden_compra)
-        self.load_fecha_entrega(fecha_entrega)
+        self.load_fecha_entrega(fecha_entrega, fecha_documento)  # Pasar ambas fechas
         self.load_items(items)
         
         # PASO 7: Captura para validación

@@ -367,26 +367,41 @@ class RPAWithStateMachine:
             rpa_logger.log_error(f"Error al cargar orden de compra: {str(e)}", f"Orden: {orden_compra}")
             raise
 
-    def load_fecha_entrega(self, fecha_entrega):
+    def load_fecha_entrega(self, fecha_entrega, fecha_documento=None):
         start_time = time.time()
-        rpa_logger.log_action("Iniciando carga de fecha de entrega", f"Fecha: {fecha_entrega}")
-        
+        # Usar fecha_documento si está disponible, sino usar fecha_entrega
+        fecha_doc = fecha_documento if fecha_documento else fecha_entrega
+        rpa_logger.log_action("Iniciando carga de fechas", f"Entrega: {fecha_entrega} -> Documento: {fecha_doc}")
+
         try:
             smart_sleep('short')
+
+            # Fecha de entrega
             pyautogui.typewrite(fecha_entrega, interval=0.2)
             smart_sleep('after_input')
-            tabs_count = get_navigation_tabs('after_date')
-            smart_waits.smart_tab_wait(tabs_count, "fecha_entrega")
-            for i in range(tabs_count):
+
+            # Un Tab hacia fecha de documento
+            pyautogui.hotkey('tab')
+            smart_sleep('after_tab')
+
+            # Fecha de documento (usar fecha_documento del JSON)
+            pyautogui.typewrite(fecha_doc, interval=0.2)
+            smart_sleep('after_input')
+
+            # Tabs restantes configurables después de la sección de fechas
+            tabs_total = get_navigation_tabs('after_date')
+            remaining_tabs = max(tabs_total - 1, 0)
+            smart_waits.smart_tab_wait(remaining_tabs, "fecha_documento")
+            for _ in range(remaining_tabs):
                 pyautogui.hotkey('tab')
                 smart_sleep('after_tab')
-            
+
             duration = time.time() - start_time
-            rpa_logger.log_performance("Carga de fecha de entrega", duration)
-            rpa_logger.log_action("Fecha de entrega cargada exitosamente", f"Fecha: {fecha_entrega}")
-            
+            rpa_logger.log_performance("Carga de fechas (entrega y documento)", duration)
+            rpa_logger.log_action("Fechas cargadas exitosamente", f"Entrega: {fecha_entrega}, Documento: {fecha_doc}")
+
         except Exception as e:
-            rpa_logger.log_error(f"Error al cargar fecha de entrega: {str(e)}", f"Fecha: {fecha_entrega}")
+            rpa_logger.log_error(f"Error al cargar fechas: {str(e)}", f"Entrega: {fecha_entrega}, Documento: {fecha_doc}")
             raise
 
     def load_items(self, items):
@@ -585,10 +600,65 @@ class RPAWithStateMachine:
         
         return validation_result
 
+    def validate_agregar_button_template(self):
+        """Valida que la imagen de referencia del botón 'Agregar y' sea efectiva"""
+        import cv2
+        template_path = os.path.join(os.path.dirname(__file__), 'vision', 'reference_images', 'agregar_y_button.png')
+        
+        if not os.path.exists(template_path):
+            rpa_logger.log_error("Template del botón 'Agregar y' no encontrado", f"Archivo: {template_path}")
+            return False
+        
+        # Cargar y validar la imagen
+        template_image = cv2.imread(template_path, cv2.IMREAD_COLOR)
+        if template_image is None:
+            rpa_logger.log_error("No se pudo cargar el template del botón 'Agregar y'", "Error de lectura de imagen")
+            return False
+        
+        # Verificar dimensiones mínimas
+        height, width = template_image.shape[:2]
+        if width < 20 or height < 10:
+            rpa_logger.log_error(f"Template del botón 'Agregar y' muy pequeño: {width}x{height}", "Dimensiones insuficientes")
+            return False
+        
+        rpa_logger.log_action("Template del botón 'Agregar y' validado", f"Dimensiones: {width}x{height}")
+        return True
+
+    def capture_new_agregar_button_template(self):
+        """Captura una nueva imagen de referencia del botón 'Agregar y'"""
+        rpa_logger.log_action("Iniciando captura de nuevo template", "Posicione el mouse sobre el botón 'Agregar y' y presione Enter")
+        
+        try:
+            # Esperar input del usuario
+            input("Presione Enter cuando el mouse esté sobre el botón 'Agregar y'...")
+            
+            # Obtener posición actual del mouse
+            mouse_x, mouse_y = pyautogui.position()
+            rpa_logger.log_action("Posición del mouse capturada", f"Coordenadas: ({mouse_x}, {mouse_y})")
+            
+            # Capturar región alrededor del mouse
+            region_size = 100  # Tamaño de la región a capturar
+            region_x = max(0, mouse_x - region_size // 2)
+            region_y = max(0, mouse_y - region_size // 2)
+            
+            # Tomar screenshot de la región
+            screenshot = pyautogui.screenshot(region=(region_x, region_y, region_size, region_size))
+            
+            # Guardar como nuevo template
+            template_path = os.path.join(os.path.dirname(__file__), 'vision', 'reference_images', 'agregar_y_button.png')
+            screenshot.save(template_path)
+            
+            rpa_logger.log_action("Nuevo template capturado y guardado", f"Archivo: {template_path}")
+            return True
+            
+        except Exception as e:
+            rpa_logger.log_error(f"Error capturando nuevo template: {str(e)}", "Captura fallida")
+            return False
+
     def position_mouse_on_agregar_button(self):
-        """Posiciona el mouse en la esquina inferior derecha del botón 'Agregar y' con validación anti-error"""
+        """Posiciona el mouse en la esquina inferior izquierda del botón 'Agregar y' con búsqueda optimizada"""
         start_time = time.time()
-        rpa_logger.log_action("Iniciando posicionamiento del mouse", "Buscando botón 'Agregar y' con validación mejorada")
+        rpa_logger.log_action("Iniciando posicionamiento optimizado del mouse", "Buscando botón 'Agregar y' en esquina inferior izquierda")
         
         try:
             # Cargar la imagen del botón "Agregar y"
@@ -604,6 +674,31 @@ class RPAWithStateMachine:
                 rpa_logger.log_error("No se pudo cargar la imagen de referencia", "Error de lectura de imagen")
                 return False
             
+            # Obtener dimensiones de la pantalla para calcular la región de búsqueda
+            screen_width, screen_height = pyautogui.size()
+            rpa_logger.log_action("Dimensiones de pantalla obtenidas", f"Ancho: {screen_width}, Alto: {screen_height}")
+            
+            # Obtener configuraciones específicas del botón "Agregar y"
+            from rpa.config_manager import config
+            
+            # Configuraciones de búsqueda optimizada
+            primary_confidence = config.get('template_matching.agregar_y_button.primary_confidence', 0.85)
+            fallback_confidence = config.get('template_matching.agregar_y_button.fallback_confidence', 0.75)
+            width_ratio = config.get('template_matching.agregar_y_button.search_region_width_ratio', 0.33)
+            height_ratio = config.get('template_matching.agregar_y_button.search_region_height_ratio', 0.25)
+            margin = config.get('template_matching.agregar_y_button.margin_from_edge', 12)
+            anti_error_confidence = config.get('template_matching.agregar_y_button.anti_error_confidence', 0.7)
+            
+            # Definir región de búsqueda en la esquina inferior izquierda
+            search_width = int(screen_width * width_ratio)
+            search_height = int(screen_height * height_ratio)
+            search_x = 0  # Empezar desde el borde izquierdo
+            search_y = screen_height - search_height  # Empezar desde la parte inferior
+            
+            search_region = (search_x, search_y, search_width, search_height)
+            rpa_logger.log_action("Región de búsqueda definida", f"Esquina inferior izquierda: ({search_x}, {search_y}) - ({search_x + search_width}, {search_y + search_height})")
+            rpa_logger.log_action("Configuraciones de búsqueda", f"Confianza primaria: {primary_confidence}, Fallback: {fallback_confidence}")
+            
             # Cargar la imagen del botón "Agregar docum" (el que NO queremos presionar)
             docum_template_path = os.path.join(os.path.dirname(__file__), 'vision', 'reference_images', 'sap_agregar_docum_button.png')
             agregar_docum_image = None
@@ -617,13 +712,27 @@ class RPAWithStateMachine:
             else:
                 rpa_logger.log_action("Advertencia: Template anti-error no encontrado", f"Archivo: {docum_template_path}")
             
-            # Buscar el botón usando template matching con confianza aumentada
-            rpa_logger.log_action("Buscando botón 'Agregar y'", "Usando template matching con confianza 0.9")
+            # Buscar el botón usando template matching con confianza aumentada en la región específica
+            rpa_logger.log_action("Buscando botón 'Agregar y' en región optimizada", "Usando template matching con confianza 0.85 en esquina inferior izquierda")
             from rpa.vision.template_matcher import template_matcher
-            coordinates = template_matcher.find_template(agregar_button_image, confidence=0.9)
+            
+            # Primera búsqueda: región específica con confianza alta
+            coordinates = template_matcher.find_template(
+                agregar_button_image, 
+                confidence=primary_confidence,
+                search_region=search_region
+            )
+            
+            # Si no se encuentra en la región específica, intentar búsqueda completa con confianza más baja
+            if not coordinates:
+                rpa_logger.log_action("Botón no encontrado en región específica", "Intentando búsqueda completa con confianza reducida")
+                coordinates = template_matcher.find_template(
+                    agregar_button_image, 
+                    confidence=fallback_confidence
+                )
             
             if not coordinates:
-                rpa_logger.log_error("No se pudo encontrar el botón 'Agregar y' con confianza 0.9", "Template matching falló")
+                rpa_logger.log_error("No se pudo encontrar el botón 'Agregar y' en ninguna región", "Template matching falló completamente")
                 return False
                 
             if not isinstance(coordinates, tuple) or len(coordinates) != 2:
@@ -649,7 +758,7 @@ class RPAWithStateMachine:
                 # Buscar botón incorrecto en la región
                 wrong_button_coords = template_matcher.find_template(
                     agregar_docum_image, 
-                    confidence=0.7,
+                    confidence=anti_error_confidence,
                     search_region=search_region
                 )
                 
@@ -675,7 +784,6 @@ class RPAWithStateMachine:
             template_height, template_width = agregar_button_image.shape[:2]
             
             # Calcular la esquina inferior derecha DENTRO del botón con margen más conservador
-            margin = 12  # Píxeles de margen aumentado desde el borde del botón
             corner_x = button_x + (template_width // 2) - margin
             corner_y = button_y + (template_height // 2) - margin
             
@@ -725,13 +833,13 @@ class RPAWithStateMachine:
             pyautogui.moveTo(popup_x, popup_y, duration=1.0)
             
             duration = time.time() - start_time
-            rpa_logger.log_performance("Proceso completo: posicionamiento y clic en 'Agregar y' con validación", duration)
+            rpa_logger.log_performance("Proceso completo: posicionamiento optimizado y clic en 'Agregar y'", duration)
             rpa_logger.log_action("Mouse posicionado exitosamente en 'Agregar y cerrar'", f"Posición final: ({popup_x}, {popup_y})")
             
             return True
             
         except Exception as e:
-            rpa_logger.log_error(f"Error al posicionar mouse en botón 'Agregar y': {str(e)}", "Error en posicionamiento")
+            rpa_logger.log_error(f"Error al posicionar mouse en botón 'Agregar y': {str(e)}", "Error en posicionamiento optimizado")
             return False
 
     def cancel_order(self):

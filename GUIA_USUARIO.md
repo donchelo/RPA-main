@@ -27,6 +27,57 @@ El **Sistema RPA TAMAPRINT** automatiza la inserción de órdenes de venta en SA
 3. Esperar que termine la instalación
 4. Una vez completado, ya puede usar el sistema
 
+## 🎯 Optimización del Botón "Agregar y"
+
+### Problema Resuelto
+El botón "Agregar y" está ubicado en la **esquina inferior izquierda** de la pantalla. El sistema ahora busca específicamente en esta región para mejorar la detección.
+
+### Mejoras Implementadas
+
+#### ✅ Búsqueda Optimizada
+- **Región específica:** 1/3 del ancho y 1/4 del alto de la pantalla
+- **Ubicación:** Esquina inferior izquierda
+- **Confianza primaria:** 0.85 (alta precisión)
+- **Confianza fallback:** 0.75 (si falla la primera búsqueda)
+
+#### ✅ Configuraciones Ajustables
+```yaml
+# En config.yaml
+template_matching:
+  agregar_y_button:
+    primary_confidence: 0.85
+    fallback_confidence: 0.75
+    search_region_width_ratio: 0.33
+    search_region_height_ratio: 0.25
+    margin_from_edge: 12
+    anti_error_confidence: 0.7
+```
+
+#### ✅ Herramienta de Diagnóstico
+Ejecute el script de diagnóstico para verificar la detección:
+```bash
+python debug_agregar_button.py
+```
+
+**Funciones del diagnóstico:**
+- ✅ Verifica resolución de pantalla
+- ✅ Valida template actual
+- ✅ Prueba detección en tiempo real
+- ✅ Captura nuevo template si es necesario
+
+### Solución de Problemas
+
+#### Si el botón no se detecta:
+1. **Ejecutar diagnóstico:** `python debug_agregar_button.py`
+2. **Verificar SAP:** Asegúrese de que esté abierto y visible
+3. **Capturar nuevo template:** El script puede ayudarle a crear uno nuevo
+4. **Ajustar confianza:** Modifique los valores en `config.yaml`
+
+#### Para capturar un nuevo template:
+1. Abra SAP y navegue a la pantalla con el botón "Agregar y"
+2. Ejecute: `python debug_agregar_button.py`
+3. Siga las instrucciones para capturar el template
+
 ## 📱 Cómo Usar la Interfaz Gráfica
 
 ### Pantalla Principal

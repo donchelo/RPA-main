@@ -52,6 +52,15 @@ template_matching:
   sap_icon_confidence: 0.7
   scrollbar_confidence: 0.8
   timeout: 10.0  # segundos para esperar que aparezca un elemento
+  
+  # Configuraciones específicas para botón "Agregar y"
+  agregar_y_button:
+    primary_confidence: 0.85  # Confianza para búsqueda en región específica
+    fallback_confidence: 0.75  # Confianza para búsqueda completa si falla la específica
+    search_region_width_ratio: 0.33  # 1/3 del ancho de pantalla
+    search_region_height_ratio: 0.25  # 1/4 del alto de pantalla
+    margin_from_edge: 12  # Píxeles de margen desde el borde del botón
+    anti_error_confidence: 0.7  # Confianza para detectar botón incorrecto
 
 # === CONFIGURACIÓN DE REINTENTOS ===
 retries:

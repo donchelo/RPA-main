@@ -1,4 +1,5 @@
 from typing import Optional
+from datetime import datetime
 from .state_machine import RPAEvent, StateContext, RPAState
 from .simple_logger import rpa_logger
 import time
@@ -151,29 +152,61 @@ class RPAStateHandlers:
             return RPAEvent.ORDER_FAILED
 
     def handle_loading_date(self, context: StateContext, **kwargs) -> RPAEvent:
-        """Maneja la carga de la fecha de entrega"""
+        """Maneja la carga de la fecha de entrega y fecha de documento."""
         start_time = time.time()
-        
+
         try:
-            if not context.current_data or 'fecha_entrega' not in context.current_data:
-                raise ValueError("No se encontraron datos de fecha de entrega")
-                
-            fecha_entrega = context.current_data['fecha_entrega']
+            if not context.current_data:
+                raise ValueError("No se encontraron datos")
+
+            data = context.current_data
+
+            def _try_parse_date(date_str: str):
+                if not date_str:
+                    return None
+                for fmt in ("%d/%m/%Y", "%Y-%m-%d"):
+                    try:
+                        return datetime.strptime(date_str, fmt)
+                    except Exception:
+                        pass
+                return None
+
+            candidates = []
+            if data.get('fecha_entrega'):
+                parsed = _try_parse_date(data['fecha_entrega'])
+                if parsed:
+                    candidates.append((data['fecha_entrega'], parsed))
+
+            for item in data.get('items', []):
+                fe = item.get('fecha_entrega')
+                if fe:
+                    parsed = _try_parse_date(fe)
+                    if parsed:
+                        candidates.append((fe, parsed))
+
+            if not candidates:
+                raise ValueError("No se encontraron fechas de entrega válidas")
+
+            selected_original, selected_dt = max(candidates, key=lambda t: t[1])
+
+            # Obtener fecha_documento del JSON, usar fecha_entrega como fallback
+            fecha_documento = data.get('fecha_documento', selected_original)
+
             rpa_logger.log_action(
-                f"ESTADO: Cargando fecha de entrega",
-                f"Fecha: {fecha_entrega}, Archivo: {context.current_file}"
+                "ESTADO: Cargando fechas",
+                f"Entrega: {selected_original}, Documento: {fecha_documento}, Archivo: {context.current_file}"
             )
-            
-            # Cargar la fecha de entrega
-            self.rpa.load_fecha_entrega(fecha_entrega)
-            
+
+            # Cargar las fechas (entrega y documento)
+            self.rpa.load_fecha_entrega(selected_original, fecha_documento)
+
             duration = time.time() - start_time
-            rpa_logger.log_performance("Carga de fecha de entrega", duration)
+            rpa_logger.log_performance("Carga de fechas", duration)
             context.processing_stats['date_load_time'] = duration
             return RPAEvent.DATE_LOADED
-            
+
         except Exception as e:
-            rpa_logger.log_error(f"Error cargando fecha de entrega: {str(e)}", f"Archivo: {context.current_file}")
+            rpa_logger.log_error(f"Error cargando fechas: {str(e)}", f"Archivo: {context.current_file}")
             return RPAEvent.DATE_FAILED
 
     def handle_loading_items(self, context: StateContext, **kwargs) -> RPAEvent:
