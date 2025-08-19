@@ -259,8 +259,8 @@ class RPAStateHandlers:
 
             selected_original, selected_dt = max(candidates, key=lambda t: t[1])
 
-            # Obtener fecha_documento del JSON, usar fecha_entrega como fallback
-            fecha_documento = data.get('fecha_documento', selected_original)
+            # Obtener fecha_documento del JSON, buscar también fecha_orden como alternativa
+            fecha_documento = data.get('fecha_documento') or data.get('fecha_orden', selected_original)
 
             rpa_logger.log_action(
                 "ESTADO: Cargando fechas",
