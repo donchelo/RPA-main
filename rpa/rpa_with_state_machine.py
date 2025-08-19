@@ -924,6 +924,9 @@ class RPAWithStateMachine:
         rpa_logger.log_action("Iniciando apertura de SAP orden de ventas", "Navegación usando atajos de teclado")
         
         try:
+            from rpa.vision.main import Vision
+            vision = Vision()
+            
             rpa_logger.log_action("PASO 4.0: Asegurando que la ventana esté activa", "Verificación de foco")
             windows = pyautogui.getWindowsWithTitle(self.remote_desktop_window)
             if windows:

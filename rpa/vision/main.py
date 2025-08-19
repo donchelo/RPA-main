@@ -91,6 +91,84 @@ class Vision:
         center_point_modulos_menu = (max_loc_modulos_menu[0] + w_modulos_menu//2, max_loc_modulos_menu[1] + h_modulos_menu//2)
         return center_point_modulos_menu
 
+    def get_sap_icon_coordinates(self):
+        """Busca el icono de SAP en la pantalla"""
+        try:
+            # Tomar screenshot actual
+            screenshot = pyautogui.screenshot()
+            screenshot_np = np.array(screenshot)
+            screenshot_cv = cv2.cvtColor(screenshot_np, cv2.COLOR_RGB2BGR)
+            
+            # Buscar icono de SAP
+            result_sap_icon = cv2.matchTemplate(screenshot_cv, self.sap_icon_image, cv2.TM_CCOEFF_NORMED)
+            min_val_sap_icon, max_val_sap_icon, min_loc_sap_icon, max_loc_sap_icon = cv2.minMaxLoc(result_sap_icon)
+            
+            # Verificar confianza
+            if max_val_sap_icon > 0.7:  # Umbral de confianza
+                w_sap_icon = self.sap_icon_image.shape[1]
+                h_sap_icon = self.sap_icon_image.shape[0]
+                center_point_sap_icon = (max_loc_sap_icon[0] + w_sap_icon//2, max_loc_sap_icon[1] + h_sap_icon//2)
+                return center_point_sap_icon
+            else:
+                logger.warning(f"SAP icon not found. Confidence: {max_val_sap_icon:.3f}")
+                return None
+                
+        except Exception as e:
+            logger.error(f"Error finding SAP icon: {e}")
+            return None
+
+    def get_ventas_menu_coordinates(self):
+        """Busca el menú de ventas"""
+        try:
+            # Tomar screenshot actual
+            screenshot = pyautogui.screenshot()
+            screenshot_np = np.array(screenshot)
+            screenshot_cv = cv2.cvtColor(screenshot_np, cv2.COLOR_RGB2BGR)
+            
+            # Buscar botón de ventas
+            result_ventas = cv2.matchTemplate(screenshot_cv, self.sap_ventas_menu_button_image, cv2.TM_CCOEFF_NORMED)
+            min_val_ventas, max_val_ventas, min_loc_ventas, max_loc_ventas = cv2.minMaxLoc(result_ventas)
+            
+            # Verificar confianza
+            if max_val_ventas > 0.7:
+                w_ventas = self.sap_ventas_menu_button_image.shape[1]
+                h_ventas = self.sap_ventas_menu_button_image.shape[0]
+                center_point_ventas = (max_loc_ventas[0] + w_ventas//2, max_loc_ventas[1] + h_ventas//2)
+                return center_point_ventas
+            else:
+                logger.warning(f"Ventas menu not found. Confidence: {max_val_ventas:.3f}")
+                return None
+                
+        except Exception as e:
+            logger.error(f"Error finding ventas menu: {e}")
+            return None
+
+    def get_ventas_order_coordinates(self):
+        """Busca el botón de órdenes de venta"""
+        try:
+            # Tomar screenshot actual
+            screenshot = pyautogui.screenshot()
+            screenshot_np = np.array(screenshot)
+            screenshot_cv = cv2.cvtColor(screenshot_np, cv2.COLOR_RGB2BGR)
+            
+            # Buscar botón de órdenes
+            result_ordenes = cv2.matchTemplate(screenshot_cv, self.sap_ventas_order_button_image, cv2.TM_CCOEFF_NORMED)
+            min_val_ordenes, max_val_ordenes, min_loc_ordenes, max_loc_ordenes = cv2.minMaxLoc(result_ordenes)
+            
+            # Verificar confianza
+            if max_val_ordenes > 0.7:
+                w_ordenes = self.sap_ventas_order_button_image.shape[1]
+                h_ordenes = self.sap_ventas_order_button_image.shape[0]
+                center_point_ordenes = (max_loc_ordenes[0] + w_ordenes//2, max_loc_ordenes[1] + h_ordenes//2)
+                return center_point_ordenes
+            else:
+                logger.warning(f"Ventas order button not found. Confidence: {max_val_ordenes:.3f}")
+                return None
+                
+        except Exception as e:
+            logger.error(f"Error finding ventas order button: {e}")
+            return None
+
     def get_archivos_menu_coordinates(self):
         result_archivo_menu = cv2.matchTemplate(self.sap_desktop_image, self.sap_archivo_menu_button_image ,cv2.TM_CCOEFF_NORMED)
         min_val_archivo_menu, max_val_archivo_menu, min_loc_archivo_menu, max_loc_archivo_menu = cv2.minMaxLoc(result_archivo_menu)
@@ -281,16 +359,33 @@ class Vision:
     
     def get_ventas_order_button_coordinates(self):
         """Busca el botón de Orden de Ventas en la pantalla actual"""
-        logger.info("PASO 4.3: Buscando botón de Orden de Ventas")
-        coordinates = template_matcher.find_template(
-            self.sap_ventas_order_button_image,
-            confidence=0.8
-        )
-        if coordinates:
-            logger.info(f'PASO 4.3 EXITOSO: Botón encontrado en {coordinates}')
-        else:
-            logger.warning('PASO 4.3 FALLIDO: Botón no encontrado')
-        return coordinates
+        try:
+            logger.info("PASO 4.3: Buscando botón de Orden de Ventas")
+            
+            # Tomar captura de pantalla actual
+            screenshot = pyautogui.screenshot()
+            screenshot_np = np.array(screenshot)
+            screenshot_cv = cv2.cvtColor(screenshot_np, cv2.COLOR_RGB2BGR)
+            
+            # Buscar el botón de orden de ventas en la pantalla actual
+            result = cv2.matchTemplate(screenshot_cv, self.sap_ventas_order_button_image, cv2.TM_CCOEFF_NORMED)
+            min_val, max_val, min_loc, max_loc = cv2.minMaxLoc(result)
+            
+            # Verificar confianza
+            if max_val > 0.7:  # Umbral de confianza
+                w_button = self.sap_ventas_order_button_image.shape[1]
+                h_button = self.sap_ventas_order_button_image.shape[0]
+                center_point = (max_loc[0] + w_button//2, max_loc[1] + h_button//2)
+                
+                logger.info(f'PASO 4.3 EXITOSO: Botón encontrado en {center_point} con confianza {max_val:.3f}')
+                return center_point
+            else:
+                logger.warning(f'PASO 4.3 FALLIDO: Botón no encontrado. Confianza máxima: {max_val:.3f}')
+                return None
+                
+        except Exception as e:
+            logger.error(f'Error buscando botón de Orden de Ventas: {str(e)}')
+            return None
     
     def get_sap_coordinates(self):
         """Busca el icono de SAP Business One usando template matching"""
@@ -433,6 +528,90 @@ class Vision:
             'fecha': self.get_fecha_coordinates(),
             'primer_articulo': self.get_primer_articulo_coordinates()
         }
+
+    def is_sap_desktop_visible(self):
+        """
+        Detecta si ya está en la pantalla de SAP Business One
+        usando la imagen de referencia sap_desktop.png
+        """
+        try:
+            logger.info("Verificando si ya está en la pantalla de SAP Business One")
+            
+            # Tomar captura de pantalla actual
+            screenshot = pyautogui.screenshot()
+            screenshot_np = np.array(screenshot)
+            screenshot_cv = cv2.cvtColor(screenshot_np, cv2.COLOR_RGB2BGR)
+            
+            # Buscar la imagen de referencia de SAP desktop
+            result = cv2.matchTemplate(screenshot_cv, self.sap_desktop_image, cv2.TM_CCOEFF_NORMED)
+            min_val, max_val, min_loc, max_loc = cv2.minMaxLoc(result)
+            
+            # Umbral de confianza para considerar que está en SAP
+            confidence_threshold = 0.7
+            
+            if max_val >= confidence_threshold:
+                logger.info(f"SAP desktop detectado con confianza: {max_val:.3f}")
+                return True
+            else:
+                logger.info(f"SAP desktop no detectado. Confianza máxima: {max_val:.3f}")
+                return False
+                
+        except Exception as e:
+            logger.error(f"Error al verificar pantalla de SAP: {str(e)}")
+            return False
+
+    def is_sales_order_form_visible(self):
+        """
+        Detecta si ya está en el formulario de órdenes de ventas
+        buscando múltiples elementos característicos
+        """
+        try:
+            logger.info("Verificando si ya está en el formulario de órdenes de ventas")
+            
+            # Tomar captura de pantalla actual
+            screenshot = pyautogui.screenshot()
+            screenshot_np = np.array(screenshot)
+            screenshot_cv = cv2.cvtColor(screenshot_np, cv2.COLOR_RGB2BGR)
+            
+            # Buscar múltiples elementos característicos del formulario
+            elements_found = 0
+            total_elements = 3
+            
+            # 1. Buscar campo de cliente en la pantalla actual
+            result_client = cv2.matchTemplate(screenshot_cv, self.client_field_image, cv2.TM_CCOEFF_NORMED)
+            min_val_client, max_val_client, min_loc_client, max_loc_client = cv2.minMaxLoc(result_client)
+            if max_val_client > 0.7:
+                logger.info("Campo de cliente encontrado")
+                elements_found += 1
+            
+            # 2. Buscar campo de orden de compra en la pantalla actual
+            result_orden = cv2.matchTemplate(screenshot_cv, self.orden_compra_image, cv2.TM_CCOEFF_NORMED)
+            min_val_orden, max_val_orden, min_loc_orden, max_loc_orden = cv2.minMaxLoc(result_orden)
+            if max_val_orden > 0.7:
+                logger.info("Campo de orden de compra encontrado")
+                elements_found += 1
+            
+            # 3. Buscar campo de fecha de entrega en la pantalla actual
+            result_fecha = cv2.matchTemplate(screenshot_cv, self.fecha_entrega_image, cv2.TM_CCOEFF_NORMED)
+            min_val_fecha, max_val_fecha, min_loc_fecha, max_loc_fecha = cv2.minMaxLoc(result_fecha)
+            if max_val_fecha > 0.7:
+                logger.info("Campo de fecha de entrega encontrado")
+                elements_found += 1
+            
+            # Si encontramos al menos 2 de 3 elementos, consideramos que estamos en el formulario
+            confidence_threshold = 2
+            is_visible = elements_found >= confidence_threshold
+            
+            if is_visible:
+                logger.info(f"Formulario de órdenes de ventas detectado ({elements_found}/{total_elements} elementos)")
+            else:
+                logger.info(f"Formulario de órdenes de ventas no detectado ({elements_found}/{total_elements} elementos)")
+            
+            return is_visible
+                
+        except Exception as e:
+            logger.error(f"Error al verificar formulario de órdenes de ventas: {str(e)}")
+            return False
 
 if __name__ == '__main__':
     vision = Vision()

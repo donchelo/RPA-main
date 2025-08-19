@@ -32,6 +32,12 @@ class RPAStateHandlers:
         )
         
         try:
+            # PASO 1: Ir directamente al escritorio remoto
+            rpa_logger.log_action(
+                "Iniciando conexión directa al escritorio remoto",
+                "Sin retrasos - procediendo inmediatamente"
+            )
+            
             # Intentar conectar al escritorio remoto
             success = self.rpa.get_remote_desktop()
             
@@ -50,28 +56,67 @@ class RPAStateHandlers:
             return RPAEvent.REMOTE_DESKTOP_FAILED
 
     def handle_opening_sap(self, context: StateContext, **kwargs) -> RPAEvent:
-        """Maneja la apertura de SAP Business One"""
+        """Maneja la apertura de SAP Business One y detecta dónde está actualmente"""
         start_time = time.time()
         rpa_logger.log_action(
-            f"ESTADO: Abriendo SAP Business One",
+            f"ESTADO: Detectando ubicación actual y abriendo SAP Business One",
             f"Archivo: {context.current_file}"
         )
         
         try:
-            # Intentar abrir SAP
-            success = self.rpa.open_sap()
+            from rpa.vision.main import Vision
+            vision = Vision()
             
-            if success:
+            # PASO 1: Detectar dónde estamos actualmente
+            rpa_logger.log_action(
+                "Detectando ubicación actual en el sistema",
+                "Verificando estado de SAP y escritorio remoto"
+            )
+            
+            # Verificar si ya estamos en SAP desktop
+            if vision.is_sap_desktop_visible():
+                rpa_logger.log_action(
+                    "SAP Business One ya está abierto y visible",
+                    "Saltando directamente a navegación de órdenes de ventas"
+                )
                 duration = time.time() - start_time
-                rpa_logger.log_performance("Apertura de SAP", duration)
-                context.processing_stats['sap_open_time'] = duration
+                context.processing_stats['sap_already_open_time'] = duration
                 return RPAEvent.SAP_OPENED
+            
+            # Verificar si estamos en el escritorio remoto pero SAP no está abierto
+            rpa_logger.log_action(
+                "SAP no detectado, verificando si estamos en escritorio remoto",
+                "Buscando icono de SAP para abrir"
+            )
+            
+            # Buscar el icono de SAP para abrirlo
+            sap_coordinates = vision.get_sap_coordinates_robust()
+            if sap_coordinates:
+                rpa_logger.log_action(
+                    "Icono de SAP encontrado en escritorio remoto",
+                    "Procediendo a abrir SAP Business One"
+                )
+                
+                # Intentar abrir SAP
+                success = self.rpa.open_sap()
+                
+                if success:
+                    duration = time.time() - start_time
+                    rpa_logger.log_performance("Apertura de SAP", duration)
+                    context.processing_stats['sap_open_time'] = duration
+                    return RPAEvent.SAP_OPENED
+                else:
+                    rpa_logger.log_error("Falló la apertura de SAP", f"Archivo: {context.current_file}")
+                    return RPAEvent.SAP_FAILED
             else:
-                rpa_logger.log_error("Falló la apertura de SAP", f"Archivo: {context.current_file}")
+                rpa_logger.log_error(
+                    "No se encontró el icono de SAP en el escritorio remoto",
+                    "Verificar que SAP esté instalado y visible"
+                )
                 return RPAEvent.SAP_FAILED
                 
         except Exception as e:
-            rpa_logger.log_error(f"Error abriendo SAP: {str(e)}", f"Archivo: {context.current_file}")
+            rpa_logger.log_error(f"Error detectando ubicación o abriendo SAP: {str(e)}", f"Archivo: {context.current_file}")
             return RPAEvent.SAP_FAILED
 
     def handle_navigating_to_sales_order(self, context: StateContext, **kwargs) -> RPAEvent:
@@ -83,6 +128,31 @@ class RPAStateHandlers:
         )
         
         try:
+            from rpa.vision.main import Vision
+            vision = Vision()
+            
+            # PASO 1: Verificar si ya estamos en el formulario de órdenes de ventas
+            rpa_logger.log_action(
+                "Verificando si ya estamos en el formulario de órdenes de ventas",
+                "Buscando elementos característicos del formulario"
+            )
+            
+            # Verificar si ya estamos en el formulario de órdenes de ventas
+            if vision.is_sales_order_form_visible():
+                rpa_logger.log_action(
+                    "Ya estamos en el formulario de órdenes de ventas",
+                    "Saltando directamente a carga de datos"
+                )
+                duration = time.time() - start_time
+                context.processing_stats['already_in_form_time'] = duration
+                return RPAEvent.SALES_ORDER_OPENED
+            
+            # Si no estamos en el formulario, navegar a él
+            rpa_logger.log_action(
+                "No estamos en el formulario de órdenes de ventas",
+                "Procediendo con navegación al módulo"
+            )
+            
             # Intentar navegar al módulo de orden de ventas
             success = self.rpa.open_sap_orden_de_ventas()
             

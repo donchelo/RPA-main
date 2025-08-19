@@ -1,0 +1,38 @@
+# ========================================
+# DEPENDENCIAS DE DESARROLLO PARA RPA TAMAPRINT
+# ========================================
+# Este archivo contiene dependencias opcionales para desarrollo y testing
+
+# === TESTING ===
+pytest==8.2.0
+pytest-cov==5.0.0
+pytest-mock==3.14.0
+pytest-asyncio==0.24.0
+pytest-html==4.1.1
+
+# === FORMATTING Y LINTING ===
+black==24.10.0
+flake8==7.1.1
+mypy==1.13.0
+isort==5.13.2
+autopep8==2.1.0
+
+# === DOCUMENTACIÓN ===
+sphinx==8.2.0
+sphinx-rtd-theme==2.0.0
+myst-parser==3.0.0
+
+# === PROFILING Y DEBUGGING ===
+memory-profiler==0.61.0
+line-profiler==4.1.2
+py-spy==0.3.14
+
+# === DESARROLLO ===
+pre-commit==3.7.0
+tox==4.15.0
+coverage==7.4.3
+
+# === UTILIDADES DE DESARROLLO ===
+ipython==8.20.0
+jupyter==1.0.0
+notebook==7.1.3

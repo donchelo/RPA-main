@@ -1,20 +1,9 @@
-# Dependencias principales para RPA
+# ========================================
+# DEPENDENCIAS PRINCIPALES PARA RPA TAMAPRINT
+# ========================================
+
+# === AUTOMATIZACIÓN Y CONTROL DE INTERFAZ ===
 PyAutoGUI==0.9.54
-opencv-python==4.10.0.84
-pillow==11.0.0
-schedule==1.2.2
-numpy==2.1.3
-
-# Dependencias para OCR y visión computacional
-pytesseract==0.3.10
-easyocr==1.7.0
-
-# Dependencias de sistema y utilidades
-psutil==5.9.8
-colorama==0.4.6
-requests==2.32.3
-
-# Dependencias para manejo de ventanas (Windows)
 PyGetWindow==0.0.9
 PyMsgBox==1.0.9
 pyperclip==1.9.0
@@ -24,11 +13,49 @@ pytweening==1.2.0
 pywin32-ctypes==0.2.3
 MouseInfo==0.1.3
 
-# Dependencias de soporte
+# === VISIÓN COMPUTACIONAL Y PROCESAMIENTO DE IMÁGENES ===
+opencv-python==4.10.0.84
+pillow==11.0.0
+numpy==2.1.3
+
+# === OCR Y RECONOCIMIENTO DE TEXTO ===
+pytesseract==0.3.10
+easyocr==1.7.0
+
+# === PROGRAMACIÓN Y UTILIDADES ===
+schedule==1.2.2
+psutil==5.9.8
+colorama==0.4.6
+requests==2.32.3
+
+# === CONFIGURACIÓN Y SERIALIZACIÓN ===
+PyYAML==6.0.2
+
+# === DEPENDENCIAS DE SOPORTE ===
 packaging==24.2
 certifi==2024.8.30
 charset-normalizer==3.4.0
 idna==3.10
 urllib3==2.2.3
-typing_extensions==4.12.2
-PyYAML==6.0.2
+typing_extensions==4.13.0
+
+# === DEPENDENCIAS ADICIONALES PARA EASYOCR ===
+torch==2.8.0
+torchvision==0.23.0
+torchaudio==2.8.0
+
+# === DEPENDENCIAS PARA PROCESAMIENTO DE IMÁGENES ===
+# scikit-image==0.23.0  # Problemas de compatibilidad con Python 3.13
+matplotlib==3.9.0
+
+# === DEPENDENCIAS PARA LOGGING Y DEBUGGING ===
+loguru==0.7.2
+
+# === DEPENDENCIAS PARA MANEJO DE ARCHIVOS ===
+pathlib2==2.3.7
+
+# === DEPENDENCIAS PARA VALIDACIÓN DE DATOS ===
+jsonschema==4.24.0
+
+# === DEPENDENCIAS PARA TESTING (OPCIONAL) ===
+# Ver requirements-dev.txt para dependencias de desarrollo completas
