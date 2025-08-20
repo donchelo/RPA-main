@@ -13,7 +13,7 @@ class GoogleDriveUploader:
     """
     
     def __init__(self):
-        self.folder_id = "17zOU8KlONbkfzvEyHRcXx9IvhUA7-dKv"
+        self.folder_id = "17zOU8KlONbkfzvEyHRcXx9IvhUA7-dKv"  # Carpeta "Terminados"
         self.credentials_path = None
         self.service = None
         self._find_credentials()
