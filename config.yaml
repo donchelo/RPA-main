@@ -83,6 +83,16 @@ files:
   exclude_prefixes: [".", "desktop.ini"]
   exclude_suffixes: [".tmp"]
 
+# === CONFIGURACIÓN DE GOOGLE DRIVE ===
+google_drive:
+  enabled: true
+  folder_id: "17zOU8KlONbkfzvEyHRcXx9IvhUA7-dKv"
+  upload_original_files: true
+  upload_screenshots: false
+  # El sistema buscará credenciales en estas ubicaciones:
+  # ./credentials.json, ./google-credentials.json, ./service-account.json
+  # o en la variable de entorno GOOGLE_APPLICATION_CREDENTIALS
+
 # === CONFIGURACIÓN DE LOGGING ===
 logging:
   level: "INFO"  # DEBUG, INFO, WARNING, ERROR, CRITICAL

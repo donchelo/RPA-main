@@ -121,3 +121,5 @@ if __name__ == "__main__":
     print("\n👋 Debug completado!")
     print("💡 Revisa los screenshots guardados para análisis")
 
+
+

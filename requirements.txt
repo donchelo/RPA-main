@@ -57,5 +57,11 @@ pathlib2==2.3.7
 # === DEPENDENCIAS PARA VALIDACIÓN DE DATOS ===
 jsonschema==4.24.0
 
+# === DEPENDENCIAS PARA GOOGLE DRIVE ===
+google-auth==2.23.4
+google-auth-oauthlib==1.1.0
+google-auth-httplib2==0.1.1
+google-api-python-client==2.108.0
+
 # === DEPENDENCIAS PARA TESTING (OPCIONAL) ===
 # Ver requirements-dev.txt para dependencias de desarrollo completas
