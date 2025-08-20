@@ -25,7 +25,7 @@ from pathlib import Path
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
 try:
-    from rpa.google_drive_uploader import GoogleDriveUploader
+    from rpa.google_drive_oauth_uploader import GoogleDriveOAuthUploader as GoogleDriveUploader
     from rpa.config_manager import ConfigManager
     from rpa.simple_logger import rpa_logger
 except ImportError as e:

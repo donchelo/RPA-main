@@ -169,7 +169,8 @@ def test_file_upload():
     print("\n📤 PASO 5: Probando subida de archivo...")
     
     try:
-        from rpa.google_drive_uploader import drive_uploader
+        from rpa.google_drive_oauth_uploader import GoogleDriveOAuthUploader
+        drive_uploader = GoogleDriveOAuthUploader()
         
         # Crear archivo de prueba
         test_file = "./test_upload.txt"

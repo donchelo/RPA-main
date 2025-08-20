@@ -6,7 +6,7 @@ Script para capturar imágenes de referencia de SAP Business One
 import pyautogui
 import time
 import os
-from rpa.logger import rpa_logger
+from rpa.simple_logger import rpa_logger
 
 def capture_sap_references():
     """Captura imágenes de referencia de SAP Business One"""

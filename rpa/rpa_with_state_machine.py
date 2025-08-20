@@ -556,21 +556,20 @@ class RPAWithStateMachine:
             # NUEVO: Subir archivos originales PNG y PDF a Google Drive
             drive_upload_result = None
             try:
-                 from rpa.google_drive_oauth_uploader import drive_uploader
-                 rpa_logger.log_action("Iniciando subida de archivos originales a Google Drive", f"Archivo: {filename}")
-                 drive_upload_result = drive_uploader.upload_original_files_for_json(filename)
-                 
-                 if drive_upload_result['success']:
-                     rpa_logger.log_action("Archivos originales subidos a Google Drive exitosamente", 
-                                         f"Subidos: {drive_upload_result['files_uploaded']}/{drive_upload_result['files_found']}")
-                 else:
-                     rpa_logger.log_action("No se pudieron subir archivos originales a Google Drive", 
-                                          f"Razón: {drive_upload_result.get('message', 'Error desconocido')}")
-                     
-             except ImportError:
-                 rpa_logger.log_action("Módulo de Google Drive OAuth no disponible", "Verificar configuración OAuth")
-             except Exception as e:
-                 rpa_logger.log_error(f"Error al subir archivos originales a Google Drive: {str(e)}", f"Archivo: {filename}")
+                from rpa.google_drive_oauth_uploader import drive_uploader
+                rpa_logger.log_action("Iniciando subida de archivos originales a Google Drive", f"Archivo: {filename}")
+                drive_upload_result = drive_uploader.upload_original_files_for_json(filename)
+                
+                if drive_upload_result['success']:
+                    rpa_logger.log_action("Archivos originales subidos a Google Drive exitosamente", 
+                                        f"Subidos: {drive_upload_result['files_uploaded']}/{drive_upload_result['files_found']}")
+                else:
+                    rpa_logger.log_action("No se pudieron subir archivos originales a Google Drive", 
+                                         f"Razón: {drive_upload_result.get('message', 'Error desconocido')}")
+            except ImportError:
+                rpa_logger.log_action("Módulo de Google Drive OAuth no disponible", "Verificar configuración OAuth")
+            except Exception as e:
+                rpa_logger.log_error(f"Error al subir archivos originales a Google Drive: {str(e)}", f"Archivo: {filename}")
             
             files_status = {
                 'json_exists': os.path.exists(destination_path),

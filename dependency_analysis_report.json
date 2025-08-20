@@ -2,21 +2,17 @@
   "project_info": {
     "name": "RPA TAMAPRINT",
     "analysis_date": "C:\\Users\\chelo\\OneDrive\\Escritorio\\Software\\RPA-main",
-    "total_python_files": 75
+    "total_python_files": 72
   },
   "metrics": {
-    "total_files": 75,
-    "total_lines": 19162,
-    "total_size_kb": 735.693359375,
-    "avg_file_size_kb": 9.809244791666666,
+    "total_files": 72,
+    "total_lines": 17828,
+    "total_size_kb": 678.654296875,
+    "avg_file_size_kb": 9.42575412326389,
     "largest_files": [
       [
         "rpa\\rpa_with_state_machine.py",
-        51867
-      ],
-      [
-        "rpa\\main.py",
-        34344
+        51831
       ],
       [
         "rpa\\vision\\main.py",
@@ -39,7 +35,7 @@
         18401
       ],
       [
-        "test_framework.py",
+        "tests\\legacy\\test_framework.py",
         17151
       ],
       [
@@ -47,18 +43,20 @@
         16984
       ],
       [
-        "test_google_drive_oauth.py",
+        "tests\\legacy\\test_google_drive_oauth.py",
         16908
+      ],
+      [
+        "diagnostico_google_drive.py",
+        15591
       ]
     ]
   },
   "redundancies": {
     "logging_systems": [
-      "rpa\\logger.py",
       "rpa\\simple_logger.py"
     ],
     "rpa_implementations": [
-      "rpa\\main.py",
       "rpa\\vision\\main.py"
     ],
     "google_drive_uploaders": [
@@ -66,38 +64,15 @@
       "list_google_drive_folders.py",
       "setup_google_drive_test.py",
       "solucionar_google_drive.py",
-      "test_final_google_drive.py",
-      "test_google_drive_final.py",
-      "test_google_drive_oauth.py",
-      "test_google_drive_simple.py",
-      "test_google_drive_upload.py",
       "verificar_google_drive.py",
       "rpa\\google_drive_oauth_uploader.py",
-      "rpa\\google_drive_uploader.py"
+      "tests\\legacy\\test_final_google_drive.py",
+      "tests\\legacy\\test_google_drive_final.py",
+      "tests\\legacy\\test_google_drive_oauth.py",
+      "tests\\legacy\\test_google_drive_simple.py",
+      "tests\\legacy\\test_google_drive_upload.py"
     ],
     "test_files": [
-      "test_button_detection.py",
-      "test_complete_navigation.py",
-      "test_detection_debug.py",
-      "test_final_google_drive.py",
-      "test_fixes.py",
-      "test_fixes_simple.py",
-      "test_framework.py",
-      "test_google_drive_final.py",
-      "test_google_drive_oauth.py",
-      "test_google_drive_simple.py",
-      "test_google_drive_upload.py",
-      "test_integration.py",
-      "test_intelligent_flow.py",
-      "test_mouse_movement.py",
-      "test_recovery_improvements.py",
-      "test_sap_detection.py",
-      "test_sap_flow.py",
-      "test_screenshot_naming.py",
-      "test_screen_detector.py",
-      "test_simplified_flow.py",
-      "test_upload_to_terminados.py",
-      "test_vision_fix.py",
       "external\\validador-tamaprint\\test_validador.py",
       "tests\\test_config_manager.py",
       "tests\\test_data_validation.py",
@@ -107,16 +82,36 @@
       "tests\\test_runner_fase1_completo.py",
       "tests\\test_runner_fase2.py",
       "tests\\test_runner_fase2_completo.py",
-      "tests\\test_state_machine.py"
+      "tests\\test_state_machine.py",
+      "tests\\legacy\\test_button_detection.py",
+      "tests\\legacy\\test_complete_navigation.py",
+      "tests\\legacy\\test_detection_debug.py",
+      "tests\\legacy\\test_final_google_drive.py",
+      "tests\\legacy\\test_fixes.py",
+      "tests\\legacy\\test_fixes_simple.py",
+      "tests\\legacy\\test_framework.py",
+      "tests\\legacy\\test_google_drive_final.py",
+      "tests\\legacy\\test_google_drive_oauth.py",
+      "tests\\legacy\\test_google_drive_simple.py",
+      "tests\\legacy\\test_google_drive_upload.py",
+      "tests\\legacy\\test_integration.py",
+      "tests\\legacy\\test_intelligent_flow.py",
+      "tests\\legacy\\test_mouse_movement.py",
+      "tests\\legacy\\test_recovery_improvements.py",
+      "tests\\legacy\\test_sap_detection.py",
+      "tests\\legacy\\test_sap_flow.py",
+      "tests\\legacy\\test_screenshot_naming.py",
+      "tests\\legacy\\test_screen_detector.py",
+      "tests\\legacy\\test_simplified_flow.py",
+      "tests\\legacy\\test_upload_to_terminados.py",
+      "tests\\legacy\\test_vision_fix.py"
     ],
     "debug_files": [
-      "debug_agregar_button.py",
-      "debug_navigation.py"
+      "scripts\\debug\\debug_agregar_button.py",
+      "scripts\\debug\\debug_navigation.py"
     ]
   },
   "recommendations": [
-    "CRÍTICO: Consolidar sistemas de logging - mantener solo uno",
-    "ALTO: Consolidar implementaciones RPA - mantener la más robusta",
     "MEDIO: Consolidar uploaders de Google Drive",
     "BAJO: Consolidar archivos de test en carpeta tests/"
   ]
