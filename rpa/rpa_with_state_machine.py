@@ -435,9 +435,13 @@ class RPAWithStateMachine:
                         time.sleep(2)
                         rpa_logger.log_action(f"Item {i} - Navegando al siguiente artículo", f"Código: {item['codigo']}")
                     else:
+                        # Para el último item, presionar TAB para actualizar el total antes de la foto
                         pyautogui.hotkey('tab')
                         time.sleep(2)
-                        rpa_logger.log_action(f"Item {i} - Último artículo completado, navegando a totales", f"Código: {item['codigo']}")
+                        rpa_logger.log_action(f"Item {i} - Último artículo completado, presionando TAB para actualizar total", f"Código: {item['codigo']}")
+                        # Esperar un poco más para que SAP procese y actualice el total
+                        time.sleep(3)
+                        rpa_logger.log_action(f"Item {i} - Total actualizado, listo para captura de pantalla", f"Código: {item['codigo']}")
                     
                     item_duration = time.time() - item_start_time
                     rpa_logger.log_performance(f"Item {i} procesado", item_duration)
@@ -513,7 +517,9 @@ class RPAWithStateMachine:
             validation_filename = f'{base_name}.png'
             saved_filepath = os.path.join(processed_dir, validation_filename)
             
-            time.sleep(1)
+            # Esperar un poco más para asegurar que el total esté completamente actualizado
+            rpa_logger.log_action("Esperando a que el total se actualice completamente", "Preparando captura de pantalla")
+            time.sleep(2)
             screenshot = pyautogui.screenshot()
             screenshot.save(saved_filepath)
             

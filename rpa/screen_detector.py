@@ -90,6 +90,11 @@ class ScreenDetector:
                 './rpa/vision/reference_images/sap_modulos_menu_button.png', 
                 cv2.IMREAD_COLOR
             )
+            # Nueva imagen de referencia para la interfaz principal de SAP
+            self.sap_main_interface_image = cv2.imread(
+                './rpa/vision/reference_images/sap_main_interface.png', 
+                cv2.IMREAD_COLOR
+            )
             
             # Sales Order Form
             self.sales_order_template = cv2.imread(
@@ -246,6 +251,13 @@ class ScreenDetector:
                 result = cv2.matchTemplate(screenshot, self.sap_modulos_menu_button, cv2.TM_CCOEFF_NORMED)
                 _, max_val, _, _ = cv2.minMaxLoc(result)
                 matches.append(max_val)
+            
+            # Buscar interfaz principal de SAP (nueva imagen de referencia)
+            if self.sap_main_interface_image is not None:
+                result = cv2.matchTemplate(screenshot, self.sap_main_interface_image, cv2.TM_CCOEFF_NORMED)
+                _, max_val, _, _ = cv2.minMaxLoc(result)
+                matches.append(max_val)
+                self.logger.debug(f"Confianza interfaz principal SAP: {max_val:.3f}")
             
             # Buscar layout de SAP Desktop
             if self.sap_desktop_image is not None:

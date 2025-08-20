@@ -133,12 +133,22 @@ class GoogleDriveOAuthUploader:
         files_found = []
         files_uploaded = []
         
-        # Buscar PNG original
-        png_name = f"{base_name}.png"
-        for location in search_locations:
-            png_path = os.path.join(location, png_name)
-            if os.path.exists(png_path):
-                files_found.append(('PNG', png_path))
+        # Buscar PNG original (buscar tanto el nombre base como el nombre completo del JSON)
+        png_names = [
+            f"{base_name}.png",  # Nombre base
+            f"{base_name}.PDF.png"  # Nombre completo del JSON
+        ]
+        
+        png_found = False
+        for png_name in png_names:
+            for location in search_locations:
+                png_path = os.path.join(location, png_name)
+                if os.path.exists(png_path):
+                    files_found.append(('PNG', png_path))
+                    png_found = True
+                    rpa_logger.log_action("PNG encontrado", f"Archivo: {png_name}, Ubicación: {location}")
+                    break
+            if png_found:
                 break
         
         # Buscar PDF original (priorizar .PDF mayúscula, luego .pdf minúscula)

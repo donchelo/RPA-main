@@ -50,7 +50,7 @@ messages:
   system_stopped: Sistema RPA detenido por el usuario.
 navigation:
   tabs_after_date: 4
-  tabs_after_last_quantity: 1
+  tabs_after_last_quantity: 2
   tabs_after_nit: 3
   tabs_after_order: 4
   tabs_after_quantity_next_item: 3
