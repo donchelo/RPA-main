@@ -1,0 +1,123 @@
+{
+  "project_info": {
+    "name": "RPA TAMAPRINT",
+    "analysis_date": "C:\\Users\\chelo\\OneDrive\\Escritorio\\Software\\RPA-main",
+    "total_python_files": 75
+  },
+  "metrics": {
+    "total_files": 75,
+    "total_lines": 19162,
+    "total_size_kb": 735.693359375,
+    "avg_file_size_kb": 9.809244791666666,
+    "largest_files": [
+      [
+        "rpa\\rpa_with_state_machine.py",
+        51867
+      ],
+      [
+        "rpa\\main.py",
+        34344
+      ],
+      [
+        "rpa\\vision\\main.py",
+        31568
+      ],
+      [
+        "rpa\\error_handler.py",
+        21912
+      ],
+      [
+        "rpa_launcher.py",
+        19831
+      ],
+      [
+        "rpa\\rpa_state_handlers.py",
+        19725
+      ],
+      [
+        "external\\validador-tamaprint\\validador.py",
+        18401
+      ],
+      [
+        "test_framework.py",
+        17151
+      ],
+      [
+        "rpa\\state_machine.py",
+        16984
+      ],
+      [
+        "test_google_drive_oauth.py",
+        16908
+      ]
+    ]
+  },
+  "redundancies": {
+    "logging_systems": [
+      "rpa\\logger.py",
+      "rpa\\simple_logger.py"
+    ],
+    "rpa_implementations": [
+      "rpa\\main.py",
+      "rpa\\vision\\main.py"
+    ],
+    "google_drive_uploaders": [
+      "diagnostico_google_drive.py",
+      "list_google_drive_folders.py",
+      "setup_google_drive_test.py",
+      "solucionar_google_drive.py",
+      "test_final_google_drive.py",
+      "test_google_drive_final.py",
+      "test_google_drive_oauth.py",
+      "test_google_drive_simple.py",
+      "test_google_drive_upload.py",
+      "verificar_google_drive.py",
+      "rpa\\google_drive_oauth_uploader.py",
+      "rpa\\google_drive_uploader.py"
+    ],
+    "test_files": [
+      "test_button_detection.py",
+      "test_complete_navigation.py",
+      "test_detection_debug.py",
+      "test_final_google_drive.py",
+      "test_fixes.py",
+      "test_fixes_simple.py",
+      "test_framework.py",
+      "test_google_drive_final.py",
+      "test_google_drive_oauth.py",
+      "test_google_drive_simple.py",
+      "test_google_drive_upload.py",
+      "test_integration.py",
+      "test_intelligent_flow.py",
+      "test_mouse_movement.py",
+      "test_recovery_improvements.py",
+      "test_sap_detection.py",
+      "test_sap_flow.py",
+      "test_screenshot_naming.py",
+      "test_screen_detector.py",
+      "test_simplified_flow.py",
+      "test_upload_to_terminados.py",
+      "test_vision_fix.py",
+      "external\\validador-tamaprint\\test_validador.py",
+      "tests\\test_config_manager.py",
+      "tests\\test_data_validation.py",
+      "tests\\test_error_handler.py",
+      "tests\\test_logging_system.py",
+      "tests\\test_runner_fase1.py",
+      "tests\\test_runner_fase1_completo.py",
+      "tests\\test_runner_fase2.py",
+      "tests\\test_runner_fase2_completo.py",
+      "tests\\test_state_machine.py"
+    ],
+    "debug_files": [
+      "debug_agregar_button.py",
+      "debug_navigation.py"
+    ]
+  },
+  "recommendations": [
+    "CRÍTICO: Consolidar sistemas de logging - mantener solo uno",
+    "ALTO: Consolidar implementaciones RPA - mantener la más robusta",
+    "MEDIO: Consolidar uploaders de Google Drive",
+    "BAJO: Consolidar archivos de test en carpeta tests/"
+  ]
+}
