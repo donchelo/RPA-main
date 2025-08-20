@@ -58,6 +58,12 @@ service-account*.json
 *.pem
 *.key
 
+# OAuth Credentials (Google Drive)
+oauth_credentials.json
+client_secret.json
+token.pickle
+*.pickle
+
 # Configuración local
 config.local.*
 settings.local.*
