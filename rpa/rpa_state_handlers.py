@@ -417,6 +417,9 @@ class RPAStateHandlers:
             # Extraer nombre base del archivo
             if context.current_file.endswith('.PDF.json'):
                 base_name = context.current_file.replace('.PDF.json', '')
+            elif context.current_file.endswith('.pdf.json'):
+                # CORREGIDO: Para archivos como "4500225658.pdf.json" → "4500225658"
+                base_name = context.current_file.replace('.pdf.json', '')
             elif context.current_file.endswith('.json'):
                 base_name = context.current_file.replace('.json', '')
             else:
