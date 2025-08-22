@@ -68,6 +68,9 @@ class RPAWithStateMachine:
             RPAState.POSITIONING_MOUSE, self.state_handlers.handle_positioning_mouse
         )
         self.state_machine.register_state_handler(
+            RPAState.UPLOADING_TO_GOOGLE_DRIVE, self.state_handlers.handle_uploading_to_google_drive_state
+        )
+        self.state_machine.register_state_handler(
             RPAState.COMPLETED, self.state_handlers.handle_completed_state
         )
         self.state_machine.register_state_handler(
@@ -608,7 +611,8 @@ class RPAWithStateMachine:
             'screenshot_exists': os.path.exists(screenshot_path),
             'json_size': os.path.getsize(json_path) if os.path.exists(json_path) else 0,
             'screenshot_size': os.path.getsize(screenshot_path) if os.path.exists(screenshot_path) else 0,
-            'ready_for_makecom': False
+            'ready_for_makecom': False,
+            'google_drive_upload_pending': True  # Indica que falta subir a Google Drive
         }
         
         validation_result['ready_for_makecom'] = (
@@ -620,6 +624,7 @@ class RPAWithStateMachine:
         
         if validation_result['ready_for_makecom']:
             rpa_logger.log_action("Archivos validados para Make.com", f"JSON: {filename}, Screenshot: {screenshot_name}")
+            rpa_logger.log_action("Pendiente: Subida a Google Drive", f"Archivo: {filename}")
         else:
             rpa_logger.log_error("Validación fallida para Make.com", f"Status: {validation_result}")
         

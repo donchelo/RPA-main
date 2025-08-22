@@ -20,6 +20,7 @@ class RPAState(Enum):
     TAKING_SCREENSHOT = "taking_screenshot"
     MOVING_JSON = "moving_json"
     POSITIONING_MOUSE = "positioning_mouse"
+    UPLOADING_TO_GOOGLE_DRIVE = "uploading_to_google_drive"
     COMPLETED = "completed"
     ERROR = "error"
     RETRYING = "retrying"
@@ -48,6 +49,8 @@ class RPAEvent(Enum):
     JSON_FAILED = "json_failed"
     MOUSE_POSITIONED = "mouse_positioned"
     MOUSE_POSITION_FAILED = "mouse_position_failed"
+    GOOGLE_DRIVE_UPLOADED = "google_drive_uploaded"
+    GOOGLE_DRIVE_FAILED = "google_drive_failed"
     PROCESS_COMPLETED = "process_completed"
     ERROR_OCCURRED = "error_occurred"
     RETRY = "retry"
@@ -139,8 +142,13 @@ class StateMachine:
             },
             
             RPAState.POSITIONING_MOUSE: {
-                RPAEvent.MOUSE_POSITIONED: RPAState.COMPLETED,
+                RPAEvent.MOUSE_POSITIONED: RPAState.UPLOADING_TO_GOOGLE_DRIVE,
                 RPAEvent.MOUSE_POSITION_FAILED: RPAState.ERROR,
+            },
+            
+            RPAState.UPLOADING_TO_GOOGLE_DRIVE: {
+                RPAEvent.GOOGLE_DRIVE_UPLOADED: RPAState.COMPLETED,
+                RPAEvent.GOOGLE_DRIVE_FAILED: RPAState.ERROR,
             },
             
             RPAState.ERROR: {

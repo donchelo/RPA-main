@@ -3,6 +3,7 @@ from datetime import datetime
 from .state_machine import RPAEvent, StateContext, RPAState
 from .simple_logger import rpa_logger
 import time
+import os
 
 
 class RPAStateHandlers:
@@ -400,6 +401,159 @@ class RPAStateHandlers:
         except Exception as e:
             rpa_logger.log_error(f"Error posicionando mouse: {str(e)}", f"Archivo: {context.current_file}")
             return RPAEvent.MOUSE_POSITION_FAILED
+
+    def handle_uploading_to_google_drive_state(self, context: StateContext, **kwargs) -> RPAEvent:
+        """Maneja la subida de archivos a Google Drive en orden específico: PNG primero, luego PDF"""
+        start_time = time.time()
+        rpa_logger.log_action(
+            f"ESTADO: Subiendo archivos a Google Drive",
+            f"Archivo: {context.current_file}"
+        )
+        
+        try:
+            from rpa.google_drive_oauth_uploader import GoogleDriveOAuthUploader
+            uploader = GoogleDriveOAuthUploader()
+            
+            # Extraer nombre base del archivo
+            if context.current_file.endswith('.PDF.json'):
+                base_name = context.current_file.replace('.PDF.json', '')
+            elif context.current_file.endswith('.json'):
+                base_name = context.current_file.replace('.json', '')
+            else:
+                base_name = context.current_file
+            
+            rpa_logger.log_action(
+                "Iniciando subida ordenada a Google Drive",
+                f"Base: {base_name}, Orden: PNG primero, luego PDF"
+            )
+            
+            # Buscar archivos en orden específico
+            search_locations = [
+                './data/outputs_json/Procesados/',
+                './data/outputs_json/',
+                './data/',
+                './'
+            ]
+            
+            files_uploaded = []
+            
+            # PASO 1: Subir PNG primero
+            png_names = [
+                f"{base_name}.png",  # Nombre base
+                f"{base_name}.PDF.png"  # Nombre completo del JSON
+            ]
+            
+            png_uploaded = False
+            for png_name in png_names:
+                for location in search_locations:
+                    png_path = os.path.join(location, png_name)
+                    if os.path.exists(png_path):
+                        rpa_logger.log_action(
+                            "Subiendo PNG (PASO 1)",
+                            f"Archivo: {png_name}, Ubicación: {location}"
+                        )
+                        
+                        result = uploader.upload_file(png_path)
+                        if result and result.get('success'):
+                            files_uploaded.append({
+                                'type': 'PNG',
+                                'original_path': png_path,
+                                'drive_info': result
+                            })
+                            png_uploaded = True
+                            rpa_logger.log_action(
+                                "PNG subido exitosamente (PASO 1)",
+                                f"ID: {result.get('id')}, Enlace: {result.get('link')}"
+                            )
+                            break
+                if png_uploaded:
+                    break
+            
+            # PASO 2: Subir PDF después
+            pdf_name_upper = f"{base_name}.PDF"
+            pdf_uploaded = False
+            
+            # Buscar .PDF mayúscula primero
+            for location in search_locations:
+                pdf_path = os.path.join(location, pdf_name_upper)
+                if os.path.exists(pdf_path):
+                    rpa_logger.log_action(
+                        "Subiendo PDF (PASO 2)",
+                        f"Archivo: {pdf_name_upper}, Ubicación: {location}"
+                    )
+                    
+                    result = uploader.upload_file(pdf_path)
+                    if result and result.get('success'):
+                        files_uploaded.append({
+                            'type': 'PDF',
+                            'original_path': pdf_path,
+                            'drive_info': result
+                        })
+                        pdf_uploaded = True
+                        rpa_logger.log_action(
+                            "PDF subido exitosamente (PASO 2)",
+                            f"ID: {result.get('id')}, Enlace: {result.get('link')}"
+                        )
+                        break
+            
+            # Si no se encontró .PDF mayúscula, buscar .pdf minúscula
+            if not pdf_uploaded:
+                pdf_name = f"{base_name}.pdf"
+                for location in search_locations:
+                    pdf_path = os.path.join(location, pdf_name)
+                    if os.path.exists(pdf_path):
+                        rpa_logger.log_action(
+                            "Subiendo PDF (PASO 2 - minúscula)",
+                            f"Archivo: {pdf_name}, Ubicación: {location}"
+                        )
+                        
+                        result = uploader.upload_file(pdf_path)
+                        if result and result.get('success'):
+                            files_uploaded.append({
+                                'type': 'PDF',
+                                'original_path': pdf_path,
+                                'drive_info': result
+                            })
+                            pdf_uploaded = True
+                            rpa_logger.log_action(
+                                "PDF subido exitosamente (PASO 2)",
+                                f"ID: {result.get('id')}, Enlace: {result.get('link')}"
+                            )
+                            break
+            
+            # Verificar resultado final
+            if len(files_uploaded) > 0:
+                duration = time.time() - start_time
+                context.processing_stats['google_drive_upload_time'] = duration
+                
+                rpa_logger.log_action(
+                    "ARCHIVOS SUBIDOS EXITOSAMENTE A GOOGLE DRIVE",
+                    f"Archivo: {context.current_file}, Archivos subidos: {len(files_uploaded)}/2, "
+                    f"Tiempo: {duration:.2f}s"
+                )
+                
+                # Loggear resumen de archivos subidos
+                for file_info in files_uploaded:
+                    rpa_logger.log_action(
+                        f"Archivo subido: {file_info.get('type')}",
+                        f"ID: {file_info.get('drive_info', {}).get('id', 'N/A')}, "
+                        f"Enlace: {file_info.get('drive_info', {}).get('link', 'N/A')}"
+                    )
+                
+                return RPAEvent.GOOGLE_DRIVE_UPLOADED
+            else:
+                rpa_logger.log_error(
+                    "FALLA EN SUBIDA A GOOGLE DRIVE - No se subió ningún archivo",
+                    f"Archivo: {context.current_file}"
+                )
+                return RPAEvent.GOOGLE_DRIVE_FAILED
+                
+        except Exception as e:
+            rpa_logger.log_error(
+                f"Error durante subida a Google Drive: {str(e)}",
+                f"Archivo: {context.current_file}"
+            )
+            return RPAEvent.GOOGLE_DRIVE_FAILED
 
     def handle_completed_state(self, context: StateContext, **kwargs) -> Optional[RPAEvent]:
         """Maneja el estado de proceso completado"""
