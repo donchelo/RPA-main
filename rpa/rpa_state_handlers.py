@@ -313,28 +313,23 @@ class RPAStateHandlers:
 
 
     def handle_taking_screenshot(self, context: StateContext, **kwargs) -> RPAEvent:
-        """Maneja la captura de pantalla para validación"""
+        """Maneja la confirmación de captura de pantalla (ya tomada en el estado anterior)"""
         start_time = time.time()
         rpa_logger.log_action(
-            f"ESTADO: Tomando captura de pantalla",
+            f"ESTADO: Confirmando captura de pantalla final",
             f"Archivo: {context.current_file}"
         )
         
         try:
-            # Tomar captura de pantalla
-            success = self.rpa.take_totals_screenshot(context.current_file)
-            
-            if success:
-                duration = time.time() - start_time
-                rpa_logger.log_performance("Captura de pantalla", duration)
-                context.processing_stats['screenshot_time'] = duration
-                return RPAEvent.SCREENSHOT_TAKEN
-            else:
-                rpa_logger.log_error("Falló la captura de pantalla", f"Archivo: {context.current_file}")
-                return RPAEvent.SCREENSHOT_FAILED
+            # La screenshot ya fue tomada en el estado POSITIONING_MOUSE después del clic
+            # Solo confirmamos que el proceso fue exitoso
+            duration = time.time() - start_time
+            context.processing_stats['screenshot_confirmation_time'] = duration
+            rpa_logger.log_action("Captura de pantalla final confirmada", f"Archivo: {context.current_file}")
+            return RPAEvent.SCREENSHOT_TAKEN
                 
         except Exception as e:
-            rpa_logger.log_error(f"Error tomando captura de pantalla: {str(e)}", f"Archivo: {context.current_file}")
+            rpa_logger.log_error(f"Error confirmando captura de pantalla: {str(e)}", f"Archivo: {context.current_file}")
             return RPAEvent.SCREENSHOT_FAILED
 
     def handle_moving_json(self, context: StateContext, **kwargs) -> RPAEvent:
@@ -386,7 +381,7 @@ class RPAStateHandlers:
         
         try:
             # Posicionar mouse en la esquina inferior derecha del botón "Agregar y"
-            success = self.rpa.position_mouse_on_agregar_button()
+            success = self.rpa.position_mouse_on_agregar_button(context.current_file)
             
             if success:
                 duration = time.time() - start_time

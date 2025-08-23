@@ -685,7 +685,7 @@ class RPAWithStateMachine:
             rpa_logger.log_error(f"Error capturando nuevo template: {str(e)}", "Captura fallida")
             return False
 
-    def position_mouse_on_agregar_button(self):
+    def position_mouse_on_agregar_button(self, filename=None):
         """Posiciona el mouse en la esquina inferior izquierda del botón 'Agregar y' con búsqueda optimizada"""
         start_time = time.time()
         rpa_logger.log_action("Iniciando posicionamiento optimizado del mouse", "Buscando botón 'Agregar y' en esquina inferior izquierda")
@@ -865,14 +865,52 @@ class RPAWithStateMachine:
             # Hacer clic en el botón "Agregar y cerrar"
             smart_sleep('short')
             pyautogui.click()
-            rpa_logger.log_action("Clic ejecutado en botón 'Agregar y cerrar'", "Procesamiento completado")
+            rpa_logger.log_action("Clic ejecutado en botón 'Agregar y cerrar'", "Minipantalla cerrada")
             
-            # Esperar un momento para que se procese el clic
+            # Esperar a que se cierre la minipantalla
             smart_sleep('medium')
             
+            # Dar TAB para finalizar la entrada de datos
+            rpa_logger.log_action("Finalizando entrada de datos", "Presionando TAB para completar")
+            pyautogui.press('tab')
+            
+            # Esperar 3 segundos para que se cargue el subtotal
+            rpa_logger.log_action("Esperando 3 segundos para que se cargue el subtotal", "Preparando captura final")
+            time.sleep(3)
+            
+            # Tomar screenshot final ANTES de cerrar el pedido
+            try:
+                processed_dir = './data/outputs_json/Procesados'
+                if not os.path.exists(processed_dir):
+                    os.makedirs(processed_dir)
+                
+                base_name = filename.replace('.json', '') if filename else 'unknown'
+                validation_filename = f'{base_name}.png'
+                saved_filepath = os.path.join(processed_dir, validation_filename)
+                
+                screenshot = pyautogui.screenshot()
+                screenshot.save(saved_filepath)
+                
+                rpa_logger.log_action("Screenshot final capturado exitosamente", f"Archivo: {validation_filename}")
+                rpa_logger.log_action("Ruta completa del screenshot final", f"Ubicación: {saved_filepath}")
+                
+            except Exception as screenshot_error:
+                rpa_logger.log_error(f"Error al tomar screenshot final: {str(screenshot_error)}", "Continuando sin screenshot final")
+            
+            # Hacer clic en "Agregar y" para cerrar el pedido completo
+            # Usar las coordenadas originales del botón "Agregar y" que ya encontramos
+            rpa_logger.log_action("Cerrando pedido completo", "Haciendo clic en 'Agregar y' para finalizar")
+            
+            # Usar las coordenadas originales del botón "Agregar y" que ya encontramos
+            # corner_x y corner_y son las coordenadas donde ya hicimos clic inicialmente
+            pyautogui.moveTo(corner_x, corner_y, duration=1.0)
+            smart_sleep('short')
+            pyautogui.click()
+            rpa_logger.log_action("Clic ejecutado en 'Agregar y' para cerrar pedido", "Pedido completado")
+            
             duration = time.time() - start_time
-            rpa_logger.log_performance("Proceso completo: posicionamiento optimizado y clic en 'Agregar y cerrar'", duration)
-            rpa_logger.log_action("Proceso completado exitosamente", f"Archivo procesado y guardado en SAP")
+            rpa_logger.log_performance("Proceso completo: posicionamiento, clic en 'Agregar y cerrar', TAB, screenshot final y cierre de pedido", duration)
+            rpa_logger.log_action("Proceso completado exitosamente", f"Pedido cerrado, archivo procesado, guardado y screenshot tomado")
             
             return True
             

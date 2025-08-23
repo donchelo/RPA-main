@@ -127,13 +127,8 @@ class StateMachine:
             },
             
             RPAState.LOADING_ITEMS: {
-                RPAEvent.ITEMS_LOADED: RPAState.TAKING_SCREENSHOT,
+                RPAEvent.ITEMS_LOADED: RPAState.MOVING_JSON,
                 RPAEvent.ITEMS_FAILED: RPAState.ERROR,
-            },
-            
-            RPAState.TAKING_SCREENSHOT: {
-                RPAEvent.SCREENSHOT_TAKEN: RPAState.MOVING_JSON,
-                RPAEvent.SCREENSHOT_FAILED: RPAState.ERROR,
             },
             
             RPAState.MOVING_JSON: {
@@ -142,8 +137,13 @@ class StateMachine:
             },
             
             RPAState.POSITIONING_MOUSE: {
-                RPAEvent.MOUSE_POSITIONED: RPAState.UPLOADING_TO_GOOGLE_DRIVE,
+                RPAEvent.MOUSE_POSITIONED: RPAState.TAKING_SCREENSHOT,
                 RPAEvent.MOUSE_POSITION_FAILED: RPAState.ERROR,
+            },
+            
+            RPAState.TAKING_SCREENSHOT: {
+                RPAEvent.SCREENSHOT_TAKEN: RPAState.UPLOADING_TO_GOOGLE_DRIVE,
+                RPAEvent.SCREENSHOT_FAILED: RPAState.ERROR,
             },
             
             RPAState.UPLOADING_TO_GOOGLE_DRIVE: {
