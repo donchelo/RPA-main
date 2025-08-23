@@ -862,9 +862,17 @@ class RPAWithStateMachine:
             # Posicionar mouse en el botón "Agregar y cerrar"
             pyautogui.moveTo(popup_x, popup_y, duration=1.0)
             
+            # Hacer clic en el botón "Agregar y cerrar"
+            smart_sleep('short')
+            pyautogui.click()
+            rpa_logger.log_action("Clic ejecutado en botón 'Agregar y cerrar'", "Procesamiento completado")
+            
+            # Esperar un momento para que se procese el clic
+            smart_sleep('medium')
+            
             duration = time.time() - start_time
-            rpa_logger.log_performance("Proceso completo: posicionamiento optimizado y clic en 'Agregar y'", duration)
-            rpa_logger.log_action("Mouse posicionado exitosamente en 'Agregar y cerrar'", f"Posición final: ({popup_x}, {popup_y})")
+            rpa_logger.log_performance("Proceso completo: posicionamiento optimizado y clic en 'Agregar y cerrar'", duration)
+            rpa_logger.log_action("Proceso completado exitosamente", f"Archivo procesado y guardado en SAP")
             
             return True
             
