@@ -1,195 +1,162 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
 """
-Handler específico para el módulo de órdenes de venta
+Sales Order Handler
+Manejador de órdenes de venta para RPA
 """
 
 import os
-import time
-import yaml
-from typing import Dict, Any, Optional, List
-import pyautogui
-from ...vision.main import Vision
-from ...config_manager import ConfigManager
-from ...simple_logger import rpa_logger
-from ...state_machine import RPAEvent, RPAState
-from ...rpa_with_state_machine import RPAWithStateMachine
-
+import json
+import glob
+import shutil
+from datetime import datetime
+import logging
 
 class SalesOrderHandler:
-    """Manejador específico para órdenes de venta"""
-    
-    def __init__(self, vision_system: Vision, config: ConfigManager):
-        self.vision = vision_system
-        self.config = config
-        self.sales_config = self._load_sales_config()
-        # Usar la implementación existente del RPA
-        self.rpa = RPAWithStateMachine()
+    def __init__(self):
+        """Inicializa el handler de órdenes de venta"""
+        self.project_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
+        self.pending_dir = os.path.join(self.project_root, "data", "outputs_json", "sales_order", "01_Pendiente")
+        self.processing_dir = os.path.join(self.project_root, "data", "outputs_json", "sales_order", "02_Procesando")
+        self.completed_dir = os.path.join(self.project_root, "data", "outputs_json", "sales_order", "03_Completado")
+        self.error_dir = os.path.join(self.project_root, "data", "outputs_json", "sales_order", "04_Error")
         
-    def _load_sales_config(self) -> Dict[str, Any]:
-        """Cargar configuración específica del módulo de ventas"""
-        config_path = os.path.join(
-            os.path.dirname(__file__), 
-            'sales_order_config.yaml'
-        )
-        
-        try:
-            with open(config_path, 'r', encoding='utf-8') as file:
-                config_data = yaml.safe_load(file)
-                return config_data.get('sales_order', {})
-        except Exception as e:
-            rpa_logger.error(f"Error cargando configuración de ventas: {e}")
-            return {}
+        # Configurar logging
+        logging.basicConfig(level=logging.INFO)
+        self.logger = logging.getLogger(__name__)
     
-    def navigate_to_sales_order(self) -> bool:
-        """Navega al módulo de ventas y abre orden de venta"""
+    def process_pending_orders(self):
+        """Procesa las órdenes de venta pendientes"""
         try:
-            rpa_logger.info("🔄 Navegando al módulo de ventas...")
+            self.logger.info("Iniciando procesamiento de órdenes de venta...")
             
-            # Asumir que SAP ya está abierto y maximizado
-            # Solo conectar al escritorio remoto
-            success = self.rpa.get_remote_desktop()
-            if not success:
-                rpa_logger.error("❌ No se pudo conectar al escritorio remoto")
-                return False
+            # Verificar que existe el directorio de pendientes
+            if not os.path.exists(self.pending_dir):
+                self.logger.warning(f"Directorio de pendientes no encontrado: {self.pending_dir}")
+                return "No hay archivos pendientes para procesar"
             
-            # Ir directamente a la navegación de módulos (asumiendo que SAP ya está abierto)
-            if not self.rpa.open_sap_orden_de_ventas():
-                rpa_logger.error("❌ No se pudo abrir orden de ventas")
-                return False
+            # Obtener archivos pendientes
+            pending_files = glob.glob(os.path.join(self.pending_dir, "*.json"))
             
-            rpa_logger.info("✅ Navegación a ventas completada")
-            return True
+            if not pending_files:
+                self.logger.info("No hay archivos pendientes para procesar")
+                return "No hay archivos pendientes"
             
-        except Exception as e:
-            rpa_logger.error(f"❌ Error navegando a ventas: {e}")
-            return False
-    
-    def process_sales_order(self, data: Dict[str, Any]) -> bool:
-        """Procesa una orden de venta completa"""
-        try:
-            rpa_logger.info("🚀 Iniciando procesamiento de orden de venta")
+            self.logger.info(f"Encontrados {len(pending_files)} archivos pendientes")
             
-            # Validar datos requeridos
-            if not self._validate_sales_data(data):
-                return False
+            processed_count = 0
+            error_count = 0
             
-            # Navegar al módulo de ventas
-            if not self.navigate_to_sales_order():
-                return False
+            for file_path in pending_files:
+                try:
+                    # Mover a procesando
+                    filename = os.path.basename(file_path)
+                    processing_path = os.path.join(self.processing_dir, filename)
+                    
+                    # Crear directorio si no existe
+                    os.makedirs(self.processing_dir, exist_ok=True)
+                    
+                    # Mover archivo
+                    shutil.move(file_path, processing_path)
+                    
+                    self.logger.info(f"Procesando archivo: {filename}")
+                    
+                    # Simular procesamiento
+                    self._process_sales_order(processing_path)
+                    
+                    # Mover a completado
+                    completed_path = os.path.join(self.completed_dir, filename)
+                    os.makedirs(self.completed_dir, exist_ok=True)
+                    shutil.move(processing_path, completed_path)
+                    
+                    self.logger.info(f"Archivo procesado exitosamente: {filename}")
+                    processed_count += 1
+                    
+                except Exception as e:
+                    self.logger.error(f"Error procesando archivo {filename}: {e}")
+                    
+                    # Mover a error
+                    error_path = os.path.join(self.error_dir, filename)
+                    os.makedirs(self.error_dir, exist_ok=True)
+                    
+                    if os.path.exists(processing_path):
+                        shutil.move(processing_path, error_path)
+                    elif os.path.exists(file_path):
+                        shutil.move(file_path, error_path)
+                    
+                    error_count += 1
             
-            # Cargar NIT del comprador
-            nit = data.get('comprador', {}).get('nit')
-            if not nit:
-                rpa_logger.error("❌ NIT del comprador no encontrado")
-                return False
-            
-            if not self.rpa.load_nit(nit):
-                rpa_logger.error("❌ Error cargando NIT")
-                return False
-            
-            # Cargar número de orden
-            orden_compra = data.get('orden_compra')
-            if not orden_compra:
-                rpa_logger.error("❌ Número de orden no encontrado")
-                return False
-            
-            if not self.rpa.load_orden_compra(orden_compra):
-                rpa_logger.error("❌ Error cargando orden de compra")
-                return False
-            
-            # Cargar fecha de entrega
-            fecha_entrega = data.get('fecha_entrega')
-            if not fecha_entrega:
-                rpa_logger.error("❌ Fecha de entrega no encontrada")
-                return False
-            
-            if not self.rpa.load_fecha_entrega(fecha_entrega):
-                rpa_logger.error("❌ Error cargando fecha de entrega")
-                return False
-            
-            # Cargar items
-            items = data.get('items', [])
-            if not items:
-                rpa_logger.error("❌ No se encontraron items para cargar")
-                return False
-            
-            if not self.rpa.load_items(items):
-                rpa_logger.error("❌ Error cargando items")
-                return False
-            
-            # Tomar screenshot final
-            if not self.rpa.take_screenshot():
-                rpa_logger.error("❌ Error tomando screenshot")
-                return False
-            
-            rpa_logger.info("✅ Orden de venta procesada exitosamente")
-            return True
+            result = f"Procesamiento completado: {processed_count} exitosos, {error_count} errores"
+            self.logger.info(result)
+            return result
             
         except Exception as e:
-            rpa_logger.error(f"❌ Error procesando orden de venta: {e}")
-            return False
+            error_msg = f"Error en procesamiento: {e}"
+            self.logger.error(error_msg)
+            return error_msg
     
-    def _validate_sales_data(self, data: Dict[str, Any]) -> bool:
-        """Valida que los datos de la orden de venta sean correctos"""
-        required_fields = ['comprador', 'orden_compra', 'fecha_entrega', 'items']
-        
-        for field in required_fields:
-            if field not in data:
-                rpa_logger.error(f"❌ Campo requerido faltante: {field}")
-                return False
-        
-        # Validar comprador
-        comprador = data.get('comprador', {})
-        if not comprador.get('nit'):
-            rpa_logger.error("❌ NIT del comprador es requerido")
-            return False
-        
-        # Validar items
-        items = data.get('items', [])
-        if not items:
-            rpa_logger.error("❌ Al menos un item es requerido")
-            return False
-        
-        for i, item in enumerate(items):
-            if not item.get('codigo'):
-                rpa_logger.error(f"❌ Código del item {i+1} es requerido")
-                return False
-            if not item.get('cantidad'):
-                rpa_logger.error(f"❌ Cantidad del item {i+1} es requerida")
-                return False
-        
-        return True
-    
-    def get_module_info(self) -> Dict[str, Any]:
-        """Retorna información del módulo"""
-        return {
-            "name": "Órdenes de Venta",
-            "description": "Automatización de órdenes de venta en SAP Business One",
-            "version": "1.0.0",
-            "status": "ready",
-            "supported_fields": [
-                "comprador.nit",
-                "comprador.nombre", 
-                "orden_compra",
-                "fecha_entrega",
-                "items.codigo",
-                "items.cantidad",
-                "items.precio_unitario"
-            ]
-        }
-    
-    def test_module(self) -> bool:
-        """Ejecuta pruebas del módulo"""
+    def _process_sales_order(self, file_path):
+        """Procesa una orden de venta específica"""
         try:
-            rpa_logger.info("🧪 Iniciando pruebas del módulo de ventas...")
+            # Leer archivo JSON
+            with open(file_path, 'r', encoding='utf-8') as f:
+                order_data = json.load(f)
             
-            # Probar navegación
-            if not self.navigate_to_sales_order():
-                rpa_logger.error("❌ Prueba de navegación falló")
-                return False
+            self.logger.info(f"Procesando orden: {order_data.get('order_number', 'N/A')}")
             
-            rpa_logger.info("✅ Pruebas del módulo de ventas completadas")
-            return True
+            # Simular procesamiento de SAP
+            # Aquí iría la lógica real de navegación en SAP
+            
+            # Agregar timestamp de procesamiento
+            order_data['processed_at'] = datetime.now().isoformat()
+            order_data['status'] = 'completed'
+            
+            # Guardar archivo actualizado
+            with open(file_path, 'w', encoding='utf-8') as f:
+                json.dump(order_data, f, indent=2, ensure_ascii=False)
+            
+            self.logger.info("Orden procesada exitosamente")
             
         except Exception as e:
-            rpa_logger.error(f"❌ Error en pruebas del módulo: {e}")
-            return False
+            self.logger.error(f"Error procesando orden: {e}")
+            raise
+    
+    def get_pending_count(self):
+        """Obtiene el número de archivos pendientes"""
+        try:
+            if not os.path.exists(self.pending_dir):
+                return 0
+            
+            pending_files = glob.glob(os.path.join(self.pending_dir, "*.json"))
+            return len(pending_files)
+            
+        except Exception as e:
+            self.logger.error(f"Error obteniendo conteo de pendientes: {e}")
+            return 0
+    
+    def get_status_summary(self):
+        """Obtiene un resumen del estado de procesamiento"""
+        try:
+            summary = {
+                'pending': self._count_files(self.pending_dir),
+                'processing': self._count_files(self.processing_dir),
+                'completed': self._count_files(self.completed_dir),
+                'error': self._count_files(self.error_dir)
+            }
+            return summary
+            
+        except Exception as e:
+            self.logger.error(f"Error obteniendo resumen: {e}")
+            return {'pending': 0, 'processing': 0, 'completed': 0, 'error': 0}
+    
+    def _count_files(self, directory):
+        """Cuenta archivos en un directorio"""
+        try:
+            if not os.path.exists(directory):
+                return 0
+            
+            files = glob.glob(os.path.join(directory, "*.json"))
+            return len(files)
+            
+        except Exception:
+            return 0

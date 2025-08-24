@@ -58,16 +58,24 @@ RPA-main/
    pip install -r requirements.txt
    ```
 3. Configurar credenciales en `credentials/`
-4. Ejecutar el launcher principal:
+4. Ejecutar el launcher correspondiente:
    ```bash
+   # Para órdenes de venta
+   python src/launchers/launcher_ventas.py
+   
+   # Para órdenes de producción
+   python src/launchers/launcher_produccion.py
+   
+   # Launcher unificado (para administradores)
    python src/launchers/rpa_launcher_v3_final.py
    ```
 
 ## 📁 Componentes Principales
 
 ### Launchers
-- **`rpa_launcher_v3_final.py`**: Launcher principal del sistema
-- **`launcher_ventas_mejorado.py`**: Launcher específico para ventas
+- **`launcher_ventas.py`**: Launcher específico para órdenes de venta
+- **`launcher_produccion.py`**: Launcher específico para órdenes de producción
+- **`rpa_launcher_v3_final.py`**: Launcher unificado (para administradores)
 
 ### Módulos RPA
 - **Sales Order**: Gestión automatizada de órdenes de venta

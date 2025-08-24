@@ -1,0 +1,21 @@
+{
+  "orden_compra": "4601527343",
+  "fecha_entrega": "28/08/2025",
+  "comprador": {
+    "nit": "CN890900608",
+    "nombre": "Almacenes Éxito S.A."
+  },
+  "items": [
+    {
+      "descripcion": "4002076 ETQ BLANCA 5.8X6 (PP)(TD) FILIZOLA",
+      "codigo": "4002076",
+      "cantidad": 125000,
+      "precio_unitario": 34,
+      "precio_total": 4250000,
+      "fecha_entrega": "28/08/2025"
+    }
+  ],
+  "valor_base": 4250000,
+  "total_items_unicos": 1,
+  "numero_items_totales": 125000
+}
