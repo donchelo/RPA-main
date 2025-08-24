@@ -1,0 +1,22 @@
+{
+  "orden_compra": "4500226076",
+  "fecha_documento": "22/08/2025",
+  "fecha_entrega": "27/08/2025",
+  "comprador": {
+    "nit": "CN800069934",
+    "nombre": "EMPRESA DE PRUEBA S.A.S."
+  },
+  "items": [
+    {
+      "descripcion": "ETIQUETA_PAPEL_CHEMICAL_12X8_TEST",
+      "codigo": "14010699002",
+      "cantidad": 50,
+      "precio_unitario": 250,
+      "precio_total": 12500,
+      "fecha_entrega": "27/08/2025"
+    }
+  ],
+  "valor_total": 12500,
+  "total_items_unicos": 1,
+  "numero_items_totales": 50
+}

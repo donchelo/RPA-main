@@ -1,0 +1,9 @@
+{
+  "numero_articulo": "101846",
+  "numero_pedido_interno": "6107",
+  "cantidad": 100,
+  "fecha_finalizacion": "25/12/2025",
+  "unidad_medida": "PCS",
+  "centro_trabajo": "CT001",
+  "observaciones": "Orden de producción de ejemplo para el RPA"
+}

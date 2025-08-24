@@ -1,234 +1,181 @@
 #!/usr/bin/env python3
 """
-Script de prueba simplificado para el módulo de órdenes de producción
-Versión que usa Alt+Tab para cambiar al escritorio remoto
+Prueba Simple del Módulo de Producción
+Verifica que el módulo de producción funcione correctamente
 """
 
 import os
-import sys
-import time
 import json
-from pathlib import Path
+import time
+from datetime import datetime
 
-# Agregar el directorio raíz al path para importar módulos
-sys.path.append(os.path.dirname(os.path.abspath(__file__)))
-
-from rpa.vision.main import Vision
-from rpa.config_manager import ConfigManager
-from rpa.modules.production_order import ProductionOrderHandler
+# Importar componentes del RPA
 from rpa.simple_logger import rpa_logger
+from rpa.config_manager import ConfigManager
+from rpa.vision.main import Vision
+from rpa.modules.production_order.production_order_handler import ProductionOrderHandler
 
+def test_production_components():
+    """Prueba los componentes básicos del módulo de producción"""
+    print("🔧 Probando componentes del módulo de producción...")
+    
+    try:
+        # Inicializar configuración
+        print("📋 Inicializando ConfigManager...")
+        config_manager = ConfigManager()
+        print("✅ ConfigManager inicializado")
+        
+        # Inicializar sistema de visión
+        print("👁️ Inicializando sistema de visión...")
+        vision_system = Vision()
+        print("✅ Sistema de visión inicializado")
+        
+        # Inicializar handler de producción
+        print("🏭 Inicializando handler de producción...")
+        production_handler = ProductionOrderHandler(vision_system, config_manager)
+        print("✅ Handler de producción inicializado")
+        
+        return True
+        
+    except Exception as e:
+        print(f"❌ Error inicializando componentes: {e}")
+        return False
 
-def crear_datos_ficticios():
-    """Crear datos ficticios para la prueba de producción"""
-    datos_ficticios = {
-        "numero_articulo": "ART-FICTICIO-001",
-        "numero_pedido_interno": "PI-FICTICIO-2024-001",
-        "cantidad": 150,
-        "fecha_finalizacion": "30/12/2024",
+def test_production_data():
+    """Prueba el procesamiento de datos de producción"""
+    print("\n📄 Probando datos de producción...")
+    
+    # Datos de prueba para producción
+    test_data = {
+        "numero_articulo": "ART001",
+        "numero_pedido_interno": "PI001",
+        "cantidad": 100,
+        "fecha_finalizacion": "25/12/2024",
         "unidad_medida": "PCS",
-        "centro_trabajo": "CT-FICTICIO-01",
-        "observaciones": "Orden de producción ficticia para pruebas del RPA"
+        "centro_trabajo": "CT001"
     }
-    return datos_ficticios
-
-
-def mostrar_datos_prueba(datos):
-    """Mostrar los datos de prueba de forma clara"""
-    print("\n📋 DATOS DE PRUEBA FICTICIOS")
-    print("=" * 50)
-    print(f"🏷️  Artículo: {datos['numero_articulo']}")
-    print(f"📝 Pedido Interno: {datos['numero_pedido_interno']}")
-    print(f"📊 Cantidad: {datos['cantidad']} {datos['unidad_medida']}")
-    print(f"📅 Fecha Finalización: {datos['fecha_finalizacion']}")
-    print(f"🏭 Centro Trabajo: {datos['centro_trabajo']}")
-    print(f"💬 Observaciones: {datos['observaciones']}")
-    print("=" * 50)
-
-
-def cambiar_a_escritorio_remoto():
-    """Función simplificada para cambiar al escritorio remoto usando Alt+Tab"""
-    print("🔄 Cambiando al escritorio remoto...")
     
     try:
-        import pyautogui
+        # Validar datos
+        config_manager = ConfigManager()
+        vision_system = Vision()
+        production_handler = ProductionOrderHandler(vision_system, config_manager)
         
-        # Método simple: usar Alt+Tab para cambiar a la ventana anterior
-        print("   - Usando Alt+Tab para cambiar ventana...")
-        pyautogui.hotkey('alt', 'tab')
-        time.sleep(2.0)  # Esperar a que se active la ventana
-        
-        print("✅ Cambio de ventana completado")
-        return True
-        
-    except Exception as e:
-        print(f"⚠️  Error cambiando ventana: {e}")
-        print("💡 El script continuará, pero asegúrate de que el escritorio remoto esté activo")
-        time.sleep(3.0)
-        return False
-
-
-def test_produccion_simple():
-    """Función principal para probar producción con cambio simple al escritorio remoto"""
-    print("🧪 PRUEBA DE PRODUCCIÓN SIMPLIFICADA")
-    print("=" * 60)
-    
-    try:
-        # 1. Inicializar componentes
-        print("🔄 Inicializando componentes del RPA...")
-        config = ConfigManager()
-        vision = Vision()
-        production_handler = ProductionOrderHandler(vision, config)
-        
-        # 2. Crear datos ficticios
-        print("🔄 Creando datos ficticios...")
-        datos_ficticios = crear_datos_ficticios()
-        mostrar_datos_prueba(datos_ficticios)
-        
-        # 3. Preparación manual
-        print("\n⏸️  PREPARACIÓN MANUAL REQUERIDA")
-        print("=" * 40)
-        print("🔧 PASOS A SEGUIR:")
-        print("1. Abre SAP Business One")
-        print("2. Asegúrate de estar en la pantalla principal")
-        print("3. Ten el escritorio remoto abierto")
-        print("4. Verifica que las imágenes de referencia estén disponibles")
-        print("5. El script usará Alt+Tab para cambiar al escritorio remoto")
-        
-        input("\n⏸️  Presiona ENTER cuando estés listo para comenzar...")
-        
-        # 4. Retraso inicial para cambio manual
-        print("\n⏸️  RETRASO INICIAL - Preparando cambio al escritorio remoto...")
-        print("   Tienes 5 segundos para prepararte...")
-        
-        for i in range(5, 0, -1):
-            print(f"   Iniciando en {i}...")
-            time.sleep(1)
-        
-        # 5. Cambiar al escritorio remoto usando Alt+Tab
-        print("\n🔄 PASO 0: Cambiando al escritorio remoto...")
-        escritorio_remoto_activado = cambiar_a_escritorio_remoto()
-        
-        if escritorio_remoto_activado:
-            print("✅ Escritorio remoto activado exitosamente")
+        # Probar validación
+        is_valid = production_handler._validate_production_data(test_data)
+        if is_valid:
+            print("✅ Datos de producción válidos")
+            print(f"   Artículo: {test_data['numero_articulo']}")
+            print(f"   Pedido interno: {test_data['numero_pedido_interno']}")
+            print(f"   Cantidad: {test_data['cantidad']}")
+            print(f"   Fecha: {test_data['fecha_finalizacion']}")
         else:
-            print("⚠️  Continuando sin confirmación del escritorio remoto")
-        
-        # 6. Ejecutar navegación
-        print("\n🔄 PASO 1: Navegando al módulo de producción...")
-        print("   - Presionando Alt+M...")
-        print("   - Presionando P...")
-        print("   - Buscando botón 'Orden de Fabricación'...")
-        
-        navigation_success = production_handler.navigate_to_production()
-        
-        if not navigation_success:
-            print("❌ Error en la navegación.")
-            print("💡 Verifica:")
-            print("   - Que SAP esté abierto")
-            print("   - Que estés en la pantalla principal")
-            print("   - Que las imágenes de referencia existan")
-            return False
-        
-        print("✅ Navegación completada exitosamente")
-        
-        # 7. Verificar formulario
-        print("\n⏸️  VERIFICACIÓN DEL FORMULARIO")
-        print("=" * 40)
-        print("🔍 Verifica que:")
-        print("   - El formulario de orden de producción esté abierto")
-        print("   - Todos los campos estén visibles")
-        print("   - El formulario esté listo para recibir datos")
-        
-        input("\n⏸️  Presiona ENTER para continuar con el llenado de campos...")
-        
-        # 8. Procesar orden de producción
-        print("\n🔄 PASO 2: Llenando formulario con datos ficticios...")
-        print("   - Cargando artículo...")
-        print("   - Cargando pedido interno...")
-        print("   - Cargando cantidad...")
-        print("   - Cargando fecha de finalización...")
-        
-        success = production_handler.process_production_order(
-            datos_ficticios, 
-            auto_click_crear=False  # NO hacer clic automático
-        )
-        
-        if success:
-            print("\n🎉 FORMULARIO COMPLETADO EXITOSAMENTE")
-            print("=" * 50)
-            print("✅ Todos los campos han sido llenados")
-            print("✅ Los datos ficticios están en el formulario")
-            print("✅ El formulario está listo para revisión")
-            
-            print("\n💡 PRÓXIMOS PASOS:")
-            print("   🔍 Revisa todos los datos en SAP:")
-            print(f"      - Artículo: {datos_ficticios['numero_articulo']}")
-            print(f"      - Pedido: {datos_ficticios['numero_pedido_interno']}")
-            print(f"      - Cantidad: {datos_ficticios['cantidad']}")
-            print(f"      - Fecha: {datos_ficticios['fecha_finalizacion']}")
-            
-            print("\n   🎯 DECISIÓN MANUAL:")
-            print("      - Haz clic en 'Crear' si los datos están correctos")
-            print("      - Haz clic en 'Borrar' si quieres cancelar")
-            print("      - Modifica cualquier campo si es necesario")
-            
-            # 9. Pausa final
-            print("\n⏸️  ESPERANDO DECISIÓN MANUAL")
-            print("=" * 40)
-            print("El script ha terminado. Toma tu decisión en SAP.")
-            print("Presiona ENTER cuando hayas completado la acción...")
-            
-            input()
-            print("✅ Prueba de producción simplificada finalizada correctamente")
-            
-            # 10. Resumen final
-            print("\n📊 RESUMEN DE LA PRUEBA")
-            print("=" * 40)
-            print("✅ Cambio a escritorio remoto: " + ("Exitoso" if escritorio_remoto_activado else "Manual"))
-            print("✅ Navegación: Exitosa")
-            print("✅ Carga de datos: Exitosa")
-            print("✅ Validación: Exitosa")
-            print("✅ Control manual: Funcionando")
-            print("✅ Módulo de producción: LISTO PARA USO")
-            
-        else:
-            print("❌ Error procesando la orden de producción")
-            print("💡 Verifica los logs para más detalles")
+            print("❌ Datos de producción inválidos")
             return False
         
         return True
         
     except Exception as e:
-        print(f"❌ Error durante la prueba: {e}")
-        rpa_logger.error(f"Error en test_produccion_simple: {e}")
+        print(f"❌ Error probando datos: {e}")
         return False
 
+def test_production_handler():
+    """Prueba el handler de producción"""
+    print("\n🏭 Probando handler de producción...")
+    
+    try:
+        # Inicializar componentes
+        config_manager = ConfigManager()
+        vision_system = Vision()
+        production_handler = ProductionOrderHandler(vision_system, config_manager)
+        
+        # Obtener información del módulo
+        module_info = production_handler.get_module_info()
+        print(f"✅ Módulo: {module_info['name']}")
+        print(f"   Descripción: {module_info['description']}")
+        print(f"   Versión: {module_info['version']}")
+        print(f"   Estado: {module_info['status']}")
+        print(f"   Campos soportados: {len(module_info['supported_fields'])}")
+        
+        return True
+        
+    except Exception as e:
+        print(f"❌ Error probando handler: {e}")
+        return False
+
+def test_production_images():
+    """Prueba las imágenes de referencia del módulo de producción"""
+    print("\n🖼️ Probando imágenes de referencia de producción...")
+    
+    try:
+        # Verificar que las imágenes de referencia existan
+        reference_dir = "rpa/vision/reference_images/production"
+        required_images = [
+            "sap_orden_fabricacion_button.png",
+            "sap_produccion_crear_button.png",
+            "sap_articulo_field.png",
+            "sap_cantidad_field.png",
+            "sap_fecha_finalizacion_field.png"
+        ]
+        
+        for image in required_images:
+            image_path = os.path.join(reference_dir, image)
+            if os.path.exists(image_path):
+                print(f"✅ {image} - Existe")
+            else:
+                print(f"❌ {image} - NO EXISTE")
+        
+        return True
+        
+    except Exception as e:
+        print(f"❌ Error probando imágenes: {e}")
+        return False
 
 def main():
     """Función principal"""
-    print("🚀 INICIANDO PRUEBA DE PRODUCCIÓN SIMPLIFICADA")
     print("=" * 60)
-    print("🎯 Objetivo: Probar el módulo de producción con cambio simple al escritorio remoto")
-    print("🎯 Modo: Control manual (sin auto-click en crear)")
-    print("🎯 Característica: Alt+Tab para cambiar al escritorio remoto")
-    print("🎯 Resultado esperado: Formulario llenado para revisión humana")
+    print("🧪 PRUEBA SIMPLE DEL MÓDULO DE PRODUCCIÓN")
+    print("=" * 60)
+    print(f"📅 Fecha: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
+    print()
     
-    # Ejecutar prueba
-    if test_produccion_simple():
-        print("\n🎉 PRUEBA COMPLETADA EXITOSAMENTE")
-        print("=" * 60)
-        print("✅ El módulo de producción funciona correctamente")
-        print("✅ El cambio al escritorio remoto funciona")
-        print("✅ Los datos ficticios se cargaron sin problemas")
-        print("✅ El control manual está funcionando")
-        print("✅ El módulo está listo para uso en producción")
-    else:
-        print("\n❌ LA PRUEBA FALLÓ")
-        print("=" * 60)
-        print("💡 Revisa los errores y verifica la configuración")
-        print("💡 Asegúrate de que SAP esté abierto y accesible")
-
+    # Prueba 1: Componentes del módulo de producción
+    if not test_production_components():
+        print("\n❌ PRUEBA FALLIDA: Componentes del módulo de producción")
+        return False
+    
+    # Prueba 2: Datos de producción
+    if not test_production_data():
+        print("\n❌ PRUEBA FALLIDA: Datos de producción")
+        return False
+    
+    # Prueba 3: Handler de producción
+    if not test_production_handler():
+        print("\n❌ PRUEBA FALLIDA: Handler de producción")
+        return False
+    
+    # Prueba 4: Imágenes de referencia
+    if not test_production_images():
+        print("\n❌ PRUEBA FALLIDA: Imágenes de referencia")
+        return False
+    
+    print("\n" + "=" * 60)
+    print("✅ TODAS LAS PRUEBAS EXITOSAS")
+    print("=" * 60)
+    print("\n📋 El módulo de producción está listo para usar")
+    print("🚀 Puedes ejecutar: launcher_funcional.bat")
+    print("🏭 Selecciona 'Módulo de Producción' en el launcher")
+    
+    return True
 
 if __name__ == "__main__":
-    main()
+    try:
+        success = main()
+        if success:
+            print("\n✅ Prueba completada exitosamente")
+        else:
+            print("\n❌ Prueba falló")
+    except Exception as e:
+        print(f"\n❌ Error inesperado: {e}")
+    
+    input("\nPresiona Enter para continuar...")

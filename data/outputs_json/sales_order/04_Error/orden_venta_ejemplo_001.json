@@ -1,0 +1,19 @@
+{
+  "orden_compra": "OC001",
+  "comprador": {
+    "nombre": "Cliente Ejemplo S.A.",
+    "nit": "CN800069933"
+  },
+  "items": [
+    {
+      "codigo": "ART001",
+      "cantidad": 10,
+      "descripcion": "Producto de ejemplo 1"
+    },
+    {
+      "codigo": "ART002",
+      "cantidad": 5,
+      "descripcion": "Producto de ejemplo 2"
+    }
+  ]
+}

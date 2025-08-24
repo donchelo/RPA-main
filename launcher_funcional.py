@@ -20,6 +20,7 @@ from rpa.simple_logger import rpa_logger
 from rpa.config_manager import ConfigManager
 from rpa.vision.main import Vision
 from rpa.modules.sales_order.sales_order_handler import SalesOrderHandler
+from rpa.modules.production_order.production_order_handler import ProductionOrderHandler
 
 class RPALauncherFuncional:
     def __init__(self):
@@ -35,13 +36,31 @@ class RPALauncherFuncional:
         self.processing_thread = None
         self.stop_processing = False
         
-        # Configurar directorios
+        # Configurar directorios base
         self.base_dir = "data/outputs_json"
-        self.pending_dir = os.path.join(self.base_dir, "01_Pendiente")
-        self.processing_dir = os.path.join(self.base_dir, "02_Procesando")
-        self.completed_dir = os.path.join(self.base_dir, "03_Completado")
-        self.error_dir = os.path.join(self.base_dir, "04_Error")
-        self.archived_dir = os.path.join(self.base_dir, "05_Archivado")
+        
+        # Directorios para módulo de ventas
+        self.sales_base_dir = os.path.join(self.base_dir, "sales_order")
+        self.sales_pending_dir = os.path.join(self.sales_base_dir, "01_Pendiente")
+        self.sales_processing_dir = os.path.join(self.sales_base_dir, "02_Procesando")
+        self.sales_completed_dir = os.path.join(self.sales_base_dir, "03_Completado")
+        self.sales_error_dir = os.path.join(self.sales_base_dir, "04_Error")
+        self.sales_archived_dir = os.path.join(self.sales_base_dir, "05_Archivado")
+        
+        # Directorios para módulo de producción
+        self.production_base_dir = os.path.join(self.base_dir, "production_order")
+        self.production_pending_dir = os.path.join(self.production_base_dir, "01_Pendiente")
+        self.production_processing_dir = os.path.join(self.production_base_dir, "02_Procesando")
+        self.production_completed_dir = os.path.join(self.production_base_dir, "03_Completado")
+        self.production_error_dir = os.path.join(self.production_base_dir, "04_Error")
+        self.production_archived_dir = os.path.join(self.production_base_dir, "05_Archivado")
+        
+        # Directorios actuales (se actualizan según el módulo seleccionado)
+        self.pending_dir = self.sales_pending_dir
+        self.processing_dir = self.sales_processing_dir
+        self.completed_dir = self.sales_completed_dir
+        self.error_dir = self.sales_error_dir
+        self.archived_dir = self.sales_archived_dir
         
         # Crear interfaz PRIMERO
         self.create_interface()
@@ -67,6 +86,9 @@ class RPALauncherFuncional:
             
             # Inicializar handler de órdenes de venta
             self.sales_handler = SalesOrderHandler(self.vision_system, self.config_manager)
+            
+            # Inicializar handler de órdenes de producción
+            self.production_handler = ProductionOrderHandler(self.vision_system, self.config_manager)
             
             self.log_message("✅ Componentes del RPA inicializados correctamente")
             
@@ -127,6 +149,28 @@ class RPALauncherFuncional:
             command=lambda: self.select_module("sales_order")
         )
         self.sales_btn.pack(fill=tk.X)
+        
+        # Módulo de Producción
+        production_frame = ttk.LabelFrame(parent, text="Órdenes de Producción", padding="8")
+        production_frame.pack(fill=tk.X, pady=(0, 10))
+        
+        production_info = ttk.Label(
+            production_frame,
+            text="Automatización de órdenes de producción en SAP Business One\n"
+                 "• Navega al módulo de producción\n"
+                 "• Crea órdenes de fabricación\n"
+                 "• Ingresa artículo, cantidad y fecha\n"
+                 "• Toma screenshot final",
+            justify=tk.LEFT
+        )
+        production_info.pack(anchor=tk.W, pady=(0, 8))
+        
+        self.production_btn = ttk.Button(
+            production_frame,
+            text="Seleccionar Módulo de Producción",
+            command=lambda: self.select_module("production_order")
+        )
+        self.production_btn.pack(fill=tk.X)
         
         # Información del módulo seleccionado
         self.selected_module_frame = ttk.LabelFrame(parent, text="Módulo Seleccionado", padding="8")
@@ -241,7 +285,28 @@ class RPALauncherFuncional:
         self.selected_module = module_type
         self.update_module_selection_ui()
         self.update_control_buttons()
+        self.update_directories_for_module()
         self.log_message(f"Módulo seleccionado: {module_type}")
+    
+    def update_directories_for_module(self):
+        """Actualiza los directorios según el módulo seleccionado"""
+        if self.selected_module == "sales_order":
+            self.pending_dir = self.sales_pending_dir
+            self.processing_dir = self.sales_processing_dir
+            self.completed_dir = self.sales_completed_dir
+            self.error_dir = self.sales_error_dir
+            self.archived_dir = self.sales_archived_dir
+            self.log_message("📁 Directorios actualizados para módulo de ventas")
+        elif self.selected_module == "production_order":
+            self.pending_dir = self.production_pending_dir
+            self.processing_dir = self.production_processing_dir
+            self.completed_dir = self.production_completed_dir
+            self.error_dir = self.production_error_dir
+            self.archived_dir = self.production_archived_dir
+            self.log_message("📁 Directorios actualizados para módulo de producción")
+        
+        # Actualizar estado de la cola
+        self.update_queue_status()
     
     def update_module_selection_ui(self):
         """Actualiza la interfaz de selección de módulos"""
@@ -249,6 +314,11 @@ class RPALauncherFuncional:
             if self.selected_module == "sales_order":
                 module_name = "Órdenes de Venta"
                 self.sales_btn.config(text="Módulo de Ventas Seleccionado")
+                self.production_btn.config(text="Seleccionar Módulo de Producción")
+            elif self.selected_module == "production_order":
+                module_name = "Órdenes de Producción"
+                self.production_btn.config(text="Módulo de Producción Seleccionado")
+                self.sales_btn.config(text="Seleccionar Módulo de Ventas")
             
             self.selected_module_label.config(
                 text=f"Módulo: {module_name}",
@@ -354,13 +424,20 @@ class RPALauncherFuncional:
             
             self.log_message(f"🔄 Iniciando procesamiento RPA para: {data.get('orden_compra', 'N/A')}")
             
-            # Procesar con el handler de ventas
+            # Procesar con el handler correspondiente
             if self.selected_module == "sales_order":
                 success = self.sales_handler.process_sales_order(data)
                 if success:
-                    self.log_message("✅ Procesamiento RPA completado exitosamente")
+                    self.log_message("✅ Procesamiento RPA de ventas completado exitosamente")
                 else:
-                    self.log_message("❌ Error en procesamiento RPA")
+                    self.log_message("❌ Error en procesamiento RPA de ventas")
+                return success
+            elif self.selected_module == "production_order":
+                success = self.production_handler.process_production_order(data)
+                if success:
+                    self.log_message("✅ Procesamiento RPA de producción completado exitosamente")
+                else:
+                    self.log_message("❌ Error en procesamiento RPA de producción")
                 return success
             else:
                 self.log_message("❌ Módulo no soportado")
@@ -404,11 +481,19 @@ class RPALauncherFuncional:
             if self.selected_module == "sales_order":
                 success = self.sales_handler.test_module()
                 if success:
-                    self.log_message("✅ Prueba del módulo exitosa")
-                    messagebox.showinfo("Éxito", "Prueba del módulo exitosa")
+                    self.log_message("✅ Prueba del módulo de ventas exitosa")
+                    messagebox.showinfo("Éxito", "Prueba del módulo de ventas exitosa")
                 else:
-                    self.log_message("❌ Prueba del módulo falló")
-                    messagebox.showerror("Error", "Prueba del módulo falló")
+                    self.log_message("❌ Prueba del módulo de ventas falló")
+                    messagebox.showerror("Error", "Prueba del módulo de ventas falló")
+            elif self.selected_module == "production_order":
+                success = self.production_handler.test_module()
+                if success:
+                    self.log_message("✅ Prueba del módulo de producción exitosa")
+                    messagebox.showinfo("Éxito", "Prueba del módulo de producción exitosa")
+                else:
+                    self.log_message("❌ Prueba del módulo de producción falló")
+                    messagebox.showerror("Error", "Prueba del módulo de producción falló")
         except Exception as e:
             self.log_message(f"❌ Error en prueba del módulo: {str(e)}")
             messagebox.showerror("Error", f"Error en prueba del módulo:\n{str(e)}")

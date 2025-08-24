@@ -1,0 +1,30 @@
+{
+  "orden_compra": "4500226077",
+  "fecha_documento": "22/08/2025",
+  "fecha_entrega": "28/08/2025",
+  "comprador": {
+    "nit": "CN800069935",
+    "nombre": "INDUSTRIAS DEL VALLE S.A."
+  },
+  "items": [
+    {
+      "descripcion": "ETIQUETA_METALICA_ALUMINIO_15X10",
+      "codigo": "14010699003",
+      "cantidad": 200,
+      "precio_unitario": 450,
+      "precio_total": 90000,
+      "fecha_entrega": "28/08/2025"
+    },
+    {
+      "descripcion": "ETIQUETA_PAPEL_ESPECIAL_8X5",
+      "codigo": "14010699004",
+      "cantidad": 150,
+      "precio_unitario": 180,
+      "precio_total": 27000,
+      "fecha_entrega": "28/08/2025"
+    }
+  ],
+  "valor_total": 117000,
+  "total_items_unicos": 2,
+  "numero_items_totales": 350
+}
