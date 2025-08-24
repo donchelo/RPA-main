@@ -1,0 +1,22 @@
+{
+  "orden_compra": "4500226075",
+  "fecha_documento": "22/08/2025",
+  "fecha_entrega": "26/08/2025",
+  "comprador": {
+    "nit": "CN800069933",
+    "nombre": "COMODIN S.A.S."
+  },
+  "items": [
+    {
+      "descripcion": "ETI_PAPE_CHE_11.5X6.9_HERI_F_, AZU194021",
+      "codigo": "14010699001",
+      "cantidad": 120,
+      "precio_unitario": 304,
+      "precio_total": 36480,
+      "fecha_entrega": "26/08/2025"
+    }
+  ],
+  "valor_total": 36480,
+  "total_items_unicos": 1,
+  "numero_items_totales": 120
+}

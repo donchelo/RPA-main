@@ -1,0 +1,54 @@
+sales_order:
+  form_fields:
+    nit_tabs: 3
+    orden_compra_tabs: 4
+    fecha_entrega_tabs: 4
+    field_input_delay: 0.5
+    item_code_tabs: 2
+    item_quantity_tabs: 2
+    item_price_tabs: 2
+  logging:
+    enable_detailed_logs: true
+    log_field_values: true
+    log_screenshots: true
+  navigation:
+    alt_m_delay: 0.3
+    form_load_delay: 3.0
+    mouse_click_delay: 1.0
+    v_key_delay: 0.5
+    o_key_delay: 0.5
+  performance:
+    retry_attempts: 3
+    retry_delay: 1.0
+    screenshot_quality: 95
+  reference_images:
+    base_path: rpa/vision/reference_images/
+    images:
+      sap_desktop: sap_desktop.png
+      sap_modulos_menu: sap_modulos_menu.png
+      sap_ventas_menu: sap_ventas_order_menu.png
+      sap_orden_ventas_template: sap_orden_de_ventas_template.png
+      client_field: client_field.png
+      orden_compra_field: orden_compra.png
+      fecha_entrega_field: fecha_entrega.png
+      primer_articulo: primer_articulo.png
+      cancel_order: cancel_order.png
+  retries:
+    max_field_input_attempts: 2
+    max_navigation_attempts: 3
+    retry_delay: 2.0
+  template_matching:
+    field_confidence: 0.8
+    form_confidence: 0.9
+    menu_confidence: 0.85
+    button_confidence: 0.8
+  timeouts:
+    field_input_timeout: 5.0
+    form_load_timeout: 15.0
+    navigation_timeout: 10.0
+  validation:
+    nit_format: "^[0-9]{9,15}$"
+    orden_compra_format: "^[A-Z0-9]{1,20}$"
+    fecha_format: "DD/MM/YYYY"
+    max_items: 100
+    max_quantity: 999999
