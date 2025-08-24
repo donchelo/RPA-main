@@ -1,0 +1,18 @@
+{
+  "tipo_modulo": "production_order",
+  "datos": {
+    "numero_articulo": "ART-001",
+    "numero_pedido_interno": "PI-2024-001",
+    "cantidad": 100,
+    "fecha_finalizacion": "15/12/2024",
+    "unidad_medida": "PCS",
+    "centro_trabajo": "CT-01",
+    "observaciones": "Orden de producción urgente"
+  },
+  "metadata": {
+    "fecha_creacion": "2024-12-01T10:30:00",
+    "usuario": "SISTEMA_RPA",
+    "version": "1.0",
+    "prioridad": "alta"
+  }
+}

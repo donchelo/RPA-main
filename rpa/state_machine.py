@@ -9,14 +9,26 @@ from .simple_logger import rpa_logger
 
 class RPAState(Enum):
     """Estados de la máquina de estados del RPA"""
+    # Estados base del sistema
     IDLE = "idle"
     CONNECTING_REMOTE_DESKTOP = "connecting_remote_desktop"
     OPENING_SAP = "opening_sap"
+    
+    # Estados específicos de órdenes de venta
     NAVIGATING_TO_SALES_ORDER = "navigating_to_sales_order"
     LOADING_NIT = "loading_nit"
     LOADING_ORDER = "loading_order"
     LOADING_DATE = "loading_date"
     LOADING_ITEMS = "loading_items"
+    
+    # Estados específicos de órdenes de producción
+    NAVIGATING_TO_PRODUCTION = "navigating_to_production"
+    LOADING_ARTICULO = "loading_articulo"
+    LOADING_PEDIDO_INTERNO = "loading_pedido_interno"
+    LOADING_CANTIDAD = "loading_cantidad"
+    LOADING_FECHA_FINALIZACION = "loading_fecha_finalizacion"
+    
+    # Estados comunes del sistema
     TAKING_SCREENSHOT = "taking_screenshot"
     MOVING_JSON = "moving_json"
     POSITIONING_MOUSE = "positioning_mouse"
@@ -28,11 +40,14 @@ class RPAState(Enum):
 
 class RPAEvent(Enum):
     """Eventos que pueden disparar transiciones"""
+    # Eventos base del sistema
     START_PROCESSING = "start_processing"
     REMOTE_DESKTOP_CONNECTED = "remote_desktop_connected"
     REMOTE_DESKTOP_FAILED = "remote_desktop_failed"
     SAP_OPENED = "sap_opened"
     SAP_FAILED = "sap_failed"
+    
+    # Eventos específicos de órdenes de venta
     SALES_ORDER_OPENED = "sales_order_opened"
     SALES_ORDER_FAILED = "sales_order_failed"
     NIT_LOADED = "nit_loaded"
@@ -43,6 +58,20 @@ class RPAEvent(Enum):
     DATE_FAILED = "date_failed"
     ITEMS_LOADED = "items_loaded"
     ITEMS_FAILED = "items_failed"
+    
+    # Eventos específicos de órdenes de producción
+    PRODUCTION_OPENED = "production_opened"
+    PRODUCTION_FAILED = "production_failed"
+    ARTICULO_LOADED = "articulo_loaded"
+    ARTICULO_FAILED = "articulo_failed"
+    PEDIDO_INTERNO_LOADED = "pedido_interno_loaded"
+    PEDIDO_INTERNO_FAILED = "pedido_interno_failed"
+    CANTIDAD_LOADED = "cantidad_loaded"
+    CANTIDAD_FAILED = "cantidad_failed"
+    FECHA_FINALIZACION_LOADED = "fecha_finalizacion_loaded"
+    FECHA_FINALIZACION_FAILED = "fecha_finalizacion_failed"
+    
+    # Eventos comunes del sistema
     SCREENSHOT_TAKEN = "screenshot_taken"
     SCREENSHOT_FAILED = "screenshot_failed"
     JSON_MOVED = "json_moved"
@@ -102,7 +131,7 @@ class StateMachine:
             },
             
             RPAState.OPENING_SAP: {
-                RPAEvent.SAP_OPENED: RPAState.NAVIGATING_TO_SALES_ORDER,
+                RPAEvent.SAP_OPENED: RPAState.NAVIGATING_TO_SALES_ORDER,  # Por defecto va a ventas
                 RPAEvent.SAP_FAILED: RPAState.ERROR,
             },
             
@@ -129,6 +158,32 @@ class StateMachine:
             RPAState.LOADING_ITEMS: {
                 RPAEvent.ITEMS_LOADED: RPAState.MOVING_JSON,
                 RPAEvent.ITEMS_FAILED: RPAState.ERROR,
+            },
+            
+            # Transiciones para órdenes de producción
+            RPAState.NAVIGATING_TO_PRODUCTION: {
+                RPAEvent.PRODUCTION_OPENED: RPAState.LOADING_ARTICULO,
+                RPAEvent.PRODUCTION_FAILED: RPAState.ERROR,
+            },
+            
+            RPAState.LOADING_ARTICULO: {
+                RPAEvent.ARTICULO_LOADED: RPAState.LOADING_PEDIDO_INTERNO,
+                RPAEvent.ARTICULO_FAILED: RPAState.ERROR,
+            },
+            
+            RPAState.LOADING_PEDIDO_INTERNO: {
+                RPAEvent.PEDIDO_INTERNO_LOADED: RPAState.LOADING_CANTIDAD,
+                RPAEvent.PEDIDO_INTERNO_FAILED: RPAState.ERROR,
+            },
+            
+            RPAState.LOADING_CANTIDAD: {
+                RPAEvent.CANTIDAD_LOADED: RPAState.LOADING_FECHA_FINALIZACION,
+                RPAEvent.CANTIDAD_FAILED: RPAState.ERROR,
+            },
+            
+            RPAState.LOADING_FECHA_FINALIZACION: {
+                RPAEvent.FECHA_FINALIZACION_LOADED: RPAState.MOVING_JSON,
+                RPAEvent.FECHA_FINALIZACION_FAILED: RPAState.ERROR,
             },
             
             RPAState.MOVING_JSON: {

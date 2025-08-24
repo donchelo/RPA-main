@@ -1,0 +1,45 @@
+production_order:
+  form_fields:
+    articulo_tabs: 2
+    cantidad_tabs: 2
+    fecha_finalizacion_tabs: 3
+    field_input_delay: 0.5
+    pedido_interno_tabs: 3
+  logging:
+    enable_detailed_logs: true
+    log_field_values: true
+    log_screenshots: true
+  navigation:
+    alt_m_delay: 0.5
+    form_load_delay: 3.0
+    mouse_click_delay: 2.0
+    p_key_delay: 1.0
+  reference_images:
+    base_path: rpa/vision/reference_images/production/
+    images:
+      articulo_field: sap_articulo_field.png
+      cantidad_field: sap_cantidad_field.png
+      crear_button: sap_produccion_crear_button.png
+      fecha_finalizacion_field: sap_fecha_finalizacion_field.png
+      orden_fabricacion_button: sap_orden_fabricacion_button.png
+      pedido_interno_field: sap_pedido_interno_field.png
+      produccion_form: sap_produccion_form.png
+      produccion_menu: sap_produccion_menu.png
+  retries:
+    max_field_input_attempts: 2
+    max_navigation_attempts: 3
+    retry_delay: 2.0
+  template_matching:
+    field_confidence: 0.85
+    form_confidence: 0.9
+    orden_fabricacion_button_confidence: 0.8
+    produccion_menu_confidence: 0.85
+  timeouts:
+    field_input_timeout: 5.0
+    form_load_timeout: 15.0
+    navigation_timeout: 10.0
+  validation:
+    fecha_maxima: 31/12/2030
+    fecha_minima: 01/01/2024
+    formato_fecha: DD/MM/YYYY
+    max_cantidad: 999999

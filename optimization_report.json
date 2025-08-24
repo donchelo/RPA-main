@@ -1,0 +1,64 @@
+{
+  "timestamp": "2025-08-24 10:12:46",
+  "analysis": {
+    "current_settings": {
+      "navigation": {
+        "alt_m_delay": 0.3,
+        "p_key_delay": 0.5,
+        "mouse_click_delay": 1.0,
+        "form_load_delay": 3.0
+      },
+      "template_matching": {
+        "produccion_menu_confidence": 0.85,
+        "orden_fabricacion_button_confidence": 0.8,
+        "form_confidence": 0.9,
+        "field_confidence": 0.8
+      }
+    },
+    "optimization_suggestions": [
+      {
+        "type": "navigation_delay",
+        "setting": "alt_m_delay",
+        "current": 0.5,
+        "suggested": 0.3,
+        "improvement": "Reducir delay después de Alt+M para navegación más rápida"
+      },
+      {
+        "type": "navigation_delay",
+        "setting": "p_key_delay",
+        "current": 1.0,
+        "suggested": 0.5,
+        "improvement": "Reducir delay después de presionar P"
+      },
+      {
+        "type": "navigation_delay",
+        "setting": "mouse_click_delay",
+        "current": 2.0,
+        "suggested": 1.0,
+        "improvement": "Reducir delay después de clic en botón"
+      },
+      {
+        "type": "template_matching",
+        "setting": "field_confidence",
+        "current": 0.85,
+        "suggested": 0.8,
+        "improvement": "Reducir confianza para campos para mayor flexibilidad"
+      }
+    ],
+    "performance_score": 75,
+    "estimated_improvement": 20
+  },
+  "applied_optimizations": [
+    "✅ alt_m_delay: 0.5 → 0.3",
+    "✅ p_key_delay: 1.0 → 0.5",
+    "✅ mouse_click_delay: 2.0 → 1.0",
+    "✅ field_confidence: 0.85 → 0.8",
+    "✅ Agregada configuración de performance"
+  ],
+  "backup_location": "./rpa/modules/production_order/production_order_config_backup.yaml",
+  "recommendations": [
+    "Ejecutar test_produccion_real.py para verificar optimizaciones",
+    "Monitorear logs para detectar problemas",
+    "Ajustar configuración manualmente si es necesario"
+  ]
+}
