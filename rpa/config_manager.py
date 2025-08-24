@@ -22,10 +22,10 @@ class ConfigManager:
                 with open(self.config_file, 'r', encoding='utf-8') as f:
                     return yaml.safe_load(f)
             else:
-                print(f"⚠️  Archivo de configuración no encontrado: {self.config_file}")
+                print(f"AVISO - Archivo de configuracion no encontrado: {self.config_file}")
                 return self._get_default_config()
         except Exception as e:
-            print(f"❌ Error cargando configuración: {e}")
+            print(f"ERROR - Error cargando configuracion: {e}")
             return self._get_default_config()
     
     def _get_default_config(self) -> Dict[str, Any]:

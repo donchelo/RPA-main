@@ -2,161 +2,313 @@
 # -*- coding: utf-8 -*-
 """
 Production Order Handler
-Manejador de órdenes de producción para RPA
+Manejador de órdenes de producción para RPA con funcionalidad completa de navegación SAP
 """
 
 import os
-import json
-import glob
-import shutil
-from datetime import datetime
-import logging
+import sys
+import time
+from typing import Dict, Optional
 
-class ProductionOrderHandler:
+# Agregar el directorio del módulo base al path
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
+from base_rpa_handler import BaseRPAHandler
+from rpa.simple_logger import rpa_logger
+from rpa.config_manager import get_delay
+import pyautogui
+
+class ProductionOrderHandler(BaseRPAHandler):
     def __init__(self):
-        """Inicializa el handler de órdenes de producción"""
-        self.project_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
-        self.pending_dir = os.path.join(self.project_root, "data", "outputs_json", "production_order", "01_Pendiente")
-        self.processing_dir = os.path.join(self.project_root, "data", "outputs_json", "production_order", "02_Procesando")
-        self.completed_dir = os.path.join(self.project_root, "data", "outputs_json", "production_order", "03_Completado")
-        self.error_dir = os.path.join(self.project_root, "data", "outputs_json", "production_order", "04_Error")
+        """Inicializa el handler de órdenes de producción con funcionalidad completa"""
+        super().__init__("production_order")
         
-        # Configurar logging
-        logging.basicConfig(level=logging.INFO)
-        self.logger = logging.getLogger(__name__)
+        # Cargar configuración específica del módulo
+        self.config_file = os.path.join(self.project_root, "rpa", "modules", "production_order", "production_order_config.yaml")
+        
+        rpa_logger.log_action("ProductionOrderHandler inicializado con funcionalidad completa", "Listo para procesar órdenes de producción")
     
-    def process_pending_orders(self):
-        """Procesa las órdenes de producción pendientes"""
+    # Hereda process_pending_orders de BaseRPAHandler
+    
+    def _navigate_to_module(self) -> bool:
+        """Navega al módulo de órdenes de producción en SAP"""
         try:
-            self.logger.info("Iniciando procesamiento de órdenes de producción...")
+            rpa_logger.log_action("Navegando al módulo de órdenes de producción", "Alt+M → P")
             
-            # Verificar que existe el directorio de pendientes
-            if not os.path.exists(self.pending_dir):
-                self.logger.warning(f"Directorio de pendientes no encontrado: {self.pending_dir}")
-                return "No hay archivos pendientes para procesar"
+            # PASO 1: Abrir menú de módulos (Alt+M)
+            pyautogui.hotkey('alt', 'm')
+            time.sleep(get_delay('navigation_wait') or 2.0)
             
-            # Obtener archivos pendientes
-            pending_files = glob.glob(os.path.join(self.pending_dir, "*.json"))
+            # PASO 2: Ir a Producción (P)
+            pyautogui.press('p')
+            time.sleep(get_delay('form_load_delay') or 3.0)
             
-            if not pending_files:
-                self.logger.info("No hay archivos pendientes para procesar")
-                return "No hay archivos pendientes"
+            # Verificar que el módulo de producción está abierto usando visión computacional
+            template_path = os.path.join(self.project_root, "rpa", "vision", "reference_images", "production", "produccion_form.png")
+            if os.path.exists(template_path):
+                template = self.template_matcher.load_template_image(template_path)
+                if template is not None:
+                    coordinates = self.template_matcher.find_template_with_timeout(template, timeout=10.0)
+                    if coordinates:
+                        rpa_logger.log_action("Módulo de producción detectado correctamente", f"Coordenadas: {coordinates}")
+                        return True
             
-            self.logger.info(f"Encontrados {len(pending_files)} archivos pendientes")
+            # Si no encontramos el template específico, buscar el menú de producción
+            template_path = os.path.join(self.project_root, "rpa", "vision", "reference_images", "production", "produccion_menu.png")
+            if os.path.exists(template_path):
+                template = self.template_matcher.load_template_image(template_path)
+                if template is not None:
+                    coordinates = self.template_matcher.find_template_with_timeout(template, timeout=10.0)
+                    if coordinates:
+                        rpa_logger.log_action("Menú de producción detectado correctamente", f"Coordenadas: {coordinates}")
+                        # Ahora navegar a órdenes de fabricación
+                        return self._navigate_to_production_orders()
             
-            processed_count = 0
-            error_count = 0
-            
-            for file_path in pending_files:
-                try:
-                    # Mover a procesando
-                    filename = os.path.basename(file_path)
-                    processing_path = os.path.join(self.processing_dir, filename)
-                    
-                    # Crear directorio si no existe
-                    os.makedirs(self.processing_dir, exist_ok=True)
-                    
-                    # Mover archivo
-                    shutil.move(file_path, processing_path)
-                    
-                    self.logger.info(f"Procesando archivo: {filename}")
-                    
-                    # Simular procesamiento
-                    self._process_production_order(processing_path)
-                    
-                    # Mover a completado
-                    completed_path = os.path.join(self.completed_dir, filename)
-                    os.makedirs(self.completed_dir, exist_ok=True)
-                    shutil.move(processing_path, completed_path)
-                    
-                    self.logger.info(f"Archivo procesado exitosamente: {filename}")
-                    processed_count += 1
-                    
-                except Exception as e:
-                    self.logger.error(f"Error procesando archivo {filename}: {e}")
-                    
-                    # Mover a error
-                    error_path = os.path.join(self.error_dir, filename)
-                    os.makedirs(self.error_dir, exist_ok=True)
-                    
-                    if os.path.exists(processing_path):
-                        shutil.move(processing_path, error_path)
-                    elif os.path.exists(file_path):
-                        shutil.move(file_path, error_path)
-                    
-                    error_count += 1
-            
-            result = f"Procesamiento completado: {processed_count} exitosos, {error_count} errores"
-            self.logger.info(result)
-            return result
+            rpa_logger.log_error("No se pudo verificar que el módulo de producción esté abierto")
+            return False
             
         except Exception as e:
-            error_msg = f"Error en procesamiento: {e}"
-            self.logger.error(error_msg)
-            return error_msg
+            rpa_logger.log_error(f"Error navegando al módulo de producción: {str(e)}")
+            return False
     
-    def _process_production_order(self, file_path):
-        """Procesa una orden de producción específica"""
+    def _navigate_to_production_orders(self) -> bool:
+        """Navega específicamente a órdenes de fabricación"""
         try:
-            # Leer archivo JSON
-            with open(file_path, 'r', encoding='utf-8') as f:
-                order_data = json.load(f)
+            rpa_logger.log_action("Navegando a órdenes de fabricación")
             
-            self.logger.info(f"Procesando orden de producción: {order_data.get('order_number', 'N/A')}")
+            # Buscar y hacer clic en el botón de órdenes de fabricación
+            template_path = os.path.join(self.project_root, "rpa", "vision", "reference_images", "production", "orden_fabricacion_button.png")
+            if os.path.exists(template_path):
+                template = self.template_matcher.load_template_image(template_path)
+                if template:
+                    coordinates = self.template_matcher.find_template_with_timeout(template, timeout=10.0)
+                    if coordinates:
+                        pyautogui.click(coordinates[0], coordinates[1])
+                        time.sleep(get_delay('form_load_delay') or 3.0)
+                        
+                        # Verificar que se abrió la forma de órdenes de fabricación
+                        return self._verify_production_form_opened()
             
-            # Simular procesamiento de SAP
-            # Aquí iría la lógica real de navegación en SAP para producción
-            
-            # Agregar timestamp de procesamiento
-            order_data['processed_at'] = datetime.now().isoformat()
-            order_data['status'] = 'completed'
-            
-            # Guardar archivo actualizado
-            with open(file_path, 'w', encoding='utf-8') as f:
-                json.dump(order_data, f, indent=2, ensure_ascii=False)
-            
-            self.logger.info("Orden de producción procesada exitosamente")
+            return False
             
         except Exception as e:
-            self.logger.error(f"Error procesando orden de producción: {e}")
-            raise
+            rpa_logger.log_error(f"Error navegando a órdenes de fabricación: {str(e)}")
+            return False
     
-    def get_pending_count(self):
-        """Obtiene el número de archivos pendientes"""
+    def _verify_production_form_opened(self) -> bool:
+        """Verifica que la forma de órdenes de fabricación esté abierta"""
         try:
-            if not os.path.exists(self.pending_dir):
-                return 0
+            # Buscar elementos específicos de la forma de producción
+            template_path = os.path.join(self.project_root, "rpa", "vision", "reference_images", "production", "articulo_field.png")
+            if os.path.exists(template_path):
+                template = self.template_matcher.load_template_image(template_path)
+                if template:
+                    coordinates = self.template_matcher.find_template_with_timeout(template, timeout=5.0)
+                    if coordinates:
+                        rpa_logger.log_action("Forma de órdenes de fabricación verificada correctamente")
+                        return True
             
-            pending_files = glob.glob(os.path.join(self.pending_dir, "*.json"))
-            return len(pending_files)
+            rpa_logger.log_error("No se pudo verificar que la forma de órdenes de fabricación esté abierta")
+            return False
             
         except Exception as e:
-            self.logger.error(f"Error obteniendo conteo de pendientes: {e}")
-            return 0
+            rpa_logger.log_error(f"Error verificando forma de producción: {str(e)}")
+            return False
     
-    def get_status_summary(self):
-        """Obtiene un resumen del estado de procesamiento"""
+    def _process_module_data(self, order_data: Dict) -> bool:
+        """Procesa los datos específicos de la orden de producción en SAP"""
         try:
-            summary = {
-                'pending': self._count_files(self.pending_dir),
-                'processing': self._count_files(self.processing_dir),
-                'completed': self._count_files(self.completed_dir),
-                'error': self._count_files(self.error_dir)
-            }
-            return summary
+            rpa_logger.log_action("Procesando datos de orden de producción", f"Artículo: {order_data.get('articulo', 'N/A')}")
+            
+            # PASO 1: Ingresar artículo
+            if not self._fill_articulo_field(order_data.get('articulo', '')):
+                return False
+            
+            # PASO 2: Ingresar pedido interno
+            if not self._fill_pedido_interno_field(order_data.get('pedido_interno', '')):
+                return False
+            
+            # PASO 3: Ingresar cantidad
+            if not self._fill_cantidad_field(order_data.get('cantidad', '')):
+                return False
+            
+            # PASO 4: Ingresar fecha de finalización
+            if not self._fill_fecha_finalizacion_field(order_data.get('fecha_finalizacion', '')):
+                return False
+            
+            # PASO 5: Crear la orden de fabricación
+            if not self._create_production_order():
+                return False
+            
+            rpa_logger.log_action("Datos de orden de producción procesados exitosamente")
+            return True
             
         except Exception as e:
-            self.logger.error(f"Error obteniendo resumen: {e}")
-            return {'pending': 0, 'processing': 0, 'completed': 0, 'error': 0}
+            rpa_logger.log_error(f"Error procesando datos de orden de producción: {str(e)}")
+            return False
     
-    def _count_files(self, directory):
-        """Cuenta archivos en un directorio"""
+    def _fill_articulo_field(self, articulo: str) -> bool:
+        """Llena el campo de artículo"""
         try:
-            if not os.path.exists(directory):
-                return 0
+            if not articulo:
+                rpa_logger.log_error("Artículo no proporcionado")
+                return False
             
-            files = glob.glob(os.path.join(directory, "*.json"))
-            return len(files)
+            rpa_logger.log_action(f"Ingresando artículo: {articulo}")
             
-        except Exception:
-            return 0
+            # Buscar el campo artículo usando visión computacional
+            template_path = os.path.join(self.project_root, "rpa", "vision", "reference_images", "production", "articulo_field.png")
+            if os.path.exists(template_path):
+                template = self.template_matcher.load_template_image(template_path)
+                if template:
+                    coordinates = self.template_matcher.find_template(template)
+                    if coordinates:
+                        pyautogui.click(coordinates[0], coordinates[1])
+                        time.sleep(0.5)
+            
+            # Ingresar artículo
+            pyautogui.write(articulo)
+            
+            # Navegar al siguiente campo (configurado en YAML)
+            for _ in range(2):  # articulo_tabs del config
+                pyautogui.press('tab')
+                time.sleep(0.1)
+            
+            rpa_logger.log_action(f"Artículo ingresado correctamente: {articulo}")
+            return True
+            
+        except Exception as e:
+            rpa_logger.log_error(f"Error ingresando artículo: {str(e)}")
+            return False
+    
+    def _fill_pedido_interno_field(self, pedido_interno: str) -> bool:
+        """Llena el campo de pedido interno"""
+        try:
+            if not pedido_interno:
+                rpa_logger.log_error("Pedido interno no proporcionado")
+                return False
+            
+            rpa_logger.log_action(f"Ingresando pedido interno: {pedido_interno}")
+            
+            # Buscar campo de pedido interno
+            template_path = os.path.join(self.project_root, "rpa", "vision", "reference_images", "production", "pedido_interno_field.png")
+            if os.path.exists(template_path):
+                template = self.template_matcher.load_template_image(template_path)
+                if template:
+                    coordinates = self.template_matcher.find_template(template)
+                    if coordinates:
+                        pyautogui.click(coordinates[0], coordinates[1])
+                        time.sleep(0.5)
+            
+            # Ingresar pedido interno
+            pyautogui.write(pedido_interno)
+            
+            # Navegar al siguiente campo
+            for _ in range(3):  # pedido_interno_tabs del config
+                pyautogui.press('tab')
+                time.sleep(0.1)
+            
+            rpa_logger.log_action(f"Pedido interno ingresado correctamente: {pedido_interno}")
+            return True
+            
+        except Exception as e:
+            rpa_logger.log_error(f"Error ingresando pedido interno: {str(e)}")
+            return False
+    
+    def _fill_cantidad_field(self, cantidad: str) -> bool:
+        """Llena el campo de cantidad"""
+        try:
+            if not cantidad:
+                rpa_logger.log_error("Cantidad no proporcionada")
+                return False
+            
+            rpa_logger.log_action(f"Ingresando cantidad: {cantidad}")
+            
+            # Buscar campo de cantidad
+            template_path = os.path.join(self.project_root, "rpa", "vision", "reference_images", "production", "cantidad_field.png")
+            if os.path.exists(template_path):
+                template = self.template_matcher.load_template_image(template_path)
+                if template:
+                    coordinates = self.template_matcher.find_template(template)
+                    if coordinates:
+                        pyautogui.click(coordinates[0], coordinates[1])
+                        time.sleep(0.5)
+            
+            # Limpiar campo y ingresar cantidad
+            pyautogui.hotkey('ctrl', 'a')
+            pyautogui.write(str(cantidad))
+            
+            # Navegar al siguiente campo
+            for _ in range(2):  # cantidad_tabs del config
+                pyautogui.press('tab')
+                time.sleep(0.1)
+            
+            rpa_logger.log_action(f"Cantidad ingresada correctamente: {cantidad}")
+            return True
+            
+        except Exception as e:
+            rpa_logger.log_error(f"Error ingresando cantidad: {str(e)}")
+            return False
+    
+    def _fill_fecha_finalizacion_field(self, fecha_finalizacion: str) -> bool:
+        """Llena el campo de fecha de finalización"""
+        try:
+            if not fecha_finalizacion:
+                rpa_logger.log_error("Fecha de finalización no proporcionada")
+                return False
+            
+            rpa_logger.log_action(f"Ingresando fecha de finalización: {fecha_finalizacion}")
+            
+            # Buscar campo de fecha de finalización
+            template_path = os.path.join(self.project_root, "rpa", "vision", "reference_images", "production", "fecha_finalizacion_field.png")
+            if os.path.exists(template_path):
+                template = self.template_matcher.load_template_image(template_path)
+                if template:
+                    coordinates = self.template_matcher.find_template(template)
+                    if coordinates:
+                        pyautogui.click(coordinates[0], coordinates[1])
+                        time.sleep(0.5)
+            
+            # Limpiar campo y ingresar fecha
+            pyautogui.hotkey('ctrl', 'a')
+            pyautogui.write(fecha_finalizacion)
+            
+            # Navegar al siguiente campo
+            for _ in range(3):  # fecha_finalizacion_tabs del config
+                pyautogui.press('tab')
+                time.sleep(0.1)
+            
+            rpa_logger.log_action(f"Fecha de finalización ingresada correctamente: {fecha_finalizacion}")
+            return True
+            
+        except Exception as e:
+            rpa_logger.log_error(f"Error ingresando fecha de finalización: {str(e)}")
+            return False
+    
+    def _create_production_order(self) -> bool:
+        """Crea y graba la orden de fabricación"""
+        try:
+            rpa_logger.log_action("Creando orden de fabricación")
+            
+            # Buscar y hacer clic en el botón crear
+            template_path = os.path.join(self.project_root, "rpa", "vision", "reference_images", "production", "crear_button.png")
+            if os.path.exists(template_path):
+                template = self.template_matcher.load_template_image(template_path)
+                if template:
+                    coordinates = self.template_matcher.find_template(template)
+                    if coordinates:
+                        pyautogui.click(coordinates[0], coordinates[1])
+                        time.sleep(get_delay('long') or 2.0)
+            else:
+                # Si no hay botón específico, usar Ctrl+S
+                pyautogui.hotkey('ctrl', 's')
+                time.sleep(get_delay('long') or 2.0)
+            
+            rpa_logger.log_action("Orden de fabricación creada exitosamente")
+            return True
+            
+        except Exception as e:
+            rpa_logger.log_error(f"Error creando orden de fabricación: {str(e)}")
+            return False
+    
+    # Hereda get_pending_count, get_status_summary y _count_files de BaseRPAHandler

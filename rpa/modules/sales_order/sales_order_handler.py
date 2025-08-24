@@ -2,161 +2,309 @@
 # -*- coding: utf-8 -*-
 """
 Sales Order Handler
-Manejador de órdenes de venta para RPA
+Manejador de órdenes de venta para RPA con funcionalidad completa de navegación SAP
 """
 
 import os
-import json
-import glob
-import shutil
-from datetime import datetime
-import logging
+import sys
+import time
+from typing import Dict, Optional
 
-class SalesOrderHandler:
+# Agregar el directorio del módulo base al path
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
+from base_rpa_handler import BaseRPAHandler
+from rpa.simple_logger import rpa_logger
+from rpa.config_manager import get_delay
+import pyautogui
+
+class SalesOrderHandler(BaseRPAHandler):
     def __init__(self):
-        """Inicializa el handler de órdenes de venta"""
-        self.project_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
-        self.pending_dir = os.path.join(self.project_root, "data", "outputs_json", "sales_order", "01_Pendiente")
-        self.processing_dir = os.path.join(self.project_root, "data", "outputs_json", "sales_order", "02_Procesando")
-        self.completed_dir = os.path.join(self.project_root, "data", "outputs_json", "sales_order", "03_Completado")
-        self.error_dir = os.path.join(self.project_root, "data", "outputs_json", "sales_order", "04_Error")
+        """Inicializa el handler de órdenes de venta con funcionalidad completa"""
+        super().__init__("sales_order")
         
-        # Configurar logging
-        logging.basicConfig(level=logging.INFO)
-        self.logger = logging.getLogger(__name__)
+        # Cargar configuración específica del módulo
+        self.config_file = os.path.join(self.project_root, "rpa", "modules", "sales_order", "sales_order_config.yaml")
+        
+        rpa_logger.log_action("SalesOrderHandler inicializado con funcionalidad completa", "Listo para procesar órdenes de venta")
     
-    def process_pending_orders(self):
-        """Procesa las órdenes de venta pendientes"""
+    # Hereda process_pending_orders de BaseRPAHandler
+    
+    def _navigate_to_module(self) -> bool:
+        """Navega al módulo de órdenes de venta en SAP"""
         try:
-            self.logger.info("Iniciando procesamiento de órdenes de venta...")
+            rpa_logger.log_action("Navegando al módulo de órdenes de venta", "Alt+M → V → Buscar Órdenes de Venta")
             
-            # Verificar que existe el directorio de pendientes
-            if not os.path.exists(self.pending_dir):
-                self.logger.warning(f"Directorio de pendientes no encontrado: {self.pending_dir}")
-                return "No hay archivos pendientes para procesar"
+            # PASO 1: Abrir menú de módulos (Alt+M)
+            rpa_logger.log_action("Presionando Alt+M para abrir menú de módulos")
+            pyautogui.hotkey('alt', 'm')
+            time.sleep(get_delay('navigation_wait') or 2.0)
             
-            # Obtener archivos pendientes
-            pending_files = glob.glob(os.path.join(self.pending_dir, "*.json"))
+            # PASO 2: Ir a Ventas (V)
+            rpa_logger.log_action("Presionando V para ir a módulo de Ventas")
+            pyautogui.press('v')
+            time.sleep(get_delay('navigation_wait') or 2.0)
             
-            if not pending_files:
-                self.logger.info("No hay archivos pendientes para procesar")
-                return "No hay archivos pendientes"
+            # PASO 3: Buscar y hacer clic en "Órdenes de Venta" usando visión computacional
+            rpa_logger.log_action("Buscando opción de Órdenes de Venta en el menú")
             
-            self.logger.info(f"Encontrados {len(pending_files)} archivos pendientes")
+            # Buscar imagen de órdenes de venta en el menú
+            ventas_menu_path = os.path.join(self.project_root, "rpa", "vision", "reference_images", "sap_ventas_order_menu.png")
+            if os.path.exists(ventas_menu_path):
+                template = self.template_matcher.load_template_image(ventas_menu_path)
+                if template is not None:
+                    coordinates = self.template_matcher.find_template_with_timeout(template, timeout=10.0)
+                    if coordinates:
+                        rpa_logger.log_action(f"Órdenes de Venta encontrada, haciendo clic", f"Coordenadas: {coordinates}")
+                        pyautogui.click(coordinates[0], coordinates[1])
+                        time.sleep(get_delay('form_load_delay') or 3.0)
+                        
+                        # Verificar que se abrió la forma de órdenes de venta
+                        return self._verify_sales_form_opened()
+                    else:
+                        rpa_logger.log_error("No se encontró la opción de Órdenes de Venta en el menú")
+                else:
+                    rpa_logger.log_error("No se pudo cargar el template de menú de órdenes de venta")
             
-            processed_count = 0
-            error_count = 0
+            # Si no encuentra la imagen, intentar con la tecla O como fallback
+            rpa_logger.log_action("Fallback: Presionando O para órdenes de venta")
+            pyautogui.press('o')
+            time.sleep(get_delay('form_load_delay') or 3.0)
             
-            for file_path in pending_files:
-                try:
-                    # Mover a procesando
-                    filename = os.path.basename(file_path)
-                    processing_path = os.path.join(self.processing_dir, filename)
-                    
-                    # Crear directorio si no existe
-                    os.makedirs(self.processing_dir, exist_ok=True)
-                    
-                    # Mover archivo
-                    shutil.move(file_path, processing_path)
-                    
-                    self.logger.info(f"Procesando archivo: {filename}")
-                    
-                    # Simular procesamiento
-                    self._process_sales_order(processing_path)
-                    
-                    # Mover a completado
-                    completed_path = os.path.join(self.completed_dir, filename)
-                    os.makedirs(self.completed_dir, exist_ok=True)
-                    shutil.move(processing_path, completed_path)
-                    
-                    self.logger.info(f"Archivo procesado exitosamente: {filename}")
-                    processed_count += 1
-                    
-                except Exception as e:
-                    self.logger.error(f"Error procesando archivo {filename}: {e}")
-                    
-                    # Mover a error
-                    error_path = os.path.join(self.error_dir, filename)
-                    os.makedirs(self.error_dir, exist_ok=True)
-                    
-                    if os.path.exists(processing_path):
-                        shutil.move(processing_path, error_path)
-                    elif os.path.exists(file_path):
-                        shutil.move(file_path, error_path)
-                    
-                    error_count += 1
-            
-            result = f"Procesamiento completado: {processed_count} exitosos, {error_count} errores"
-            self.logger.info(result)
-            return result
+            return self._verify_sales_form_opened()
             
         except Exception as e:
-            error_msg = f"Error en procesamiento: {e}"
-            self.logger.error(error_msg)
-            return error_msg
+            rpa_logger.log_error(f"Error navegando al módulo de ventas: {str(e)}")
+            return False
     
-    def _process_sales_order(self, file_path):
-        """Procesa una orden de venta específica"""
+    def _verify_sales_form_opened(self) -> bool:
+        """Verifica que la forma de órdenes de venta esté abierta"""
         try:
-            # Leer archivo JSON
-            with open(file_path, 'r', encoding='utf-8') as f:
-                order_data = json.load(f)
+            # Verificar que la forma de órdenes de venta está abierta usando visión computacional
+            template_path = os.path.join(self.project_root, "rpa", "vision", "reference_images", "sap_orden_de_ventas_template.png")
+            if os.path.exists(template_path):
+                template = self.template_matcher.load_template_image(template_path)
+                if template is not None:
+                    coordinates = self.template_matcher.find_template_with_timeout(template, timeout=10.0)
+                    if coordinates:
+                        rpa_logger.log_action("Forma de órdenes de venta detectada correctamente", f"Coordenadas: {coordinates}")
+                        return True
+                    else:
+                        rpa_logger.log_error("Template de órdenes de venta no encontrado en pantalla")
+                else:
+                    rpa_logger.log_error("No se pudo cargar el template de órdenes de venta")
+            else:
+                rpa_logger.log_error(f"Archivo template no existe: {template_path}")
             
-            self.logger.info(f"Procesando orden: {order_data.get('order_number', 'N/A')}")
-            
-            # Simular procesamiento de SAP
-            # Aquí iría la lógica real de navegación en SAP
-            
-            # Agregar timestamp de procesamiento
-            order_data['processed_at'] = datetime.now().isoformat()
-            order_data['status'] = 'completed'
-            
-            # Guardar archivo actualizado
-            with open(file_path, 'w', encoding='utf-8') as f:
-                json.dump(order_data, f, indent=2, ensure_ascii=False)
-            
-            self.logger.info("Orden procesada exitosamente")
+            rpa_logger.log_error("No se pudo verificar que la forma de órdenes de venta esté abierta")
+            return False
             
         except Exception as e:
-            self.logger.error(f"Error procesando orden: {e}")
-            raise
+            rpa_logger.log_error(f"Error verificando forma de órdenes de venta: {str(e)}")
+            return False
     
-    def get_pending_count(self):
-        """Obtiene el número de archivos pendientes"""
+    def _process_module_data(self, order_data: Dict) -> bool:
+        """Procesa los datos específicos de la orden de venta en SAP"""
         try:
-            if not os.path.exists(self.pending_dir):
-                return 0
+            rpa_logger.log_action("Procesando datos de orden de venta", f"Orden: {order_data.get('orden_compra', 'N/A')}")
             
-            pending_files = glob.glob(os.path.join(self.pending_dir, "*.json"))
-            return len(pending_files)
+            # PASO 1: Ingresar NIT del comprador
+            if not self._fill_nit_field(order_data.get('comprador', {}).get('nit', '')):
+                return False
+            
+            # PASO 2: Ingresar número de orden de compra
+            if not self._fill_order_field(order_data.get('orden_compra', '')):
+                return False
+            
+            # PASO 3: Ingresar fecha de entrega
+            if not self._fill_date_field(order_data.get('fecha_entrega', '')):
+                return False
+            
+            # PASO 4: Procesar items de la orden
+            if not self._process_order_items(order_data.get('items', [])):
+                return False
+            
+            # PASO 5: Finalizar la orden
+            if not self._finalize_order():
+                return False
+            
+            rpa_logger.log_action("Datos de orden de venta procesados exitosamente")
+            return True
             
         except Exception as e:
-            self.logger.error(f"Error obteniendo conteo de pendientes: {e}")
-            return 0
+            rpa_logger.log_error(f"Error procesando datos de orden de venta: {str(e)}")
+            return False
     
-    def get_status_summary(self):
-        """Obtiene un resumen del estado de procesamiento"""
+    def _fill_nit_field(self, nit: str) -> bool:
+        """Llena el campo NIT del comprador"""
         try:
-            summary = {
-                'pending': self._count_files(self.pending_dir),
-                'processing': self._count_files(self.processing_dir),
-                'completed': self._count_files(self.completed_dir),
-                'error': self._count_files(self.error_dir)
-            }
-            return summary
+            if not nit:
+                rpa_logger.log_error("NIT no proporcionado")
+                return False
+            
+            rpa_logger.log_action(f"Ingresando NIT: {nit}")
+            
+            # Buscar el campo NIT usando visión computacional
+            template_path = os.path.join(self.project_root, "rpa", "vision", "reference_images", "client_field.png")
+            if os.path.exists(template_path):
+                template = self.template_matcher.load_template_image(template_path)
+                if template:
+                    coordinates = self.template_matcher.find_template(template)
+                    if coordinates:
+                        pyautogui.click(coordinates[0], coordinates[1])
+                        time.sleep(0.5)
+            
+            # Ingresar NIT
+            pyautogui.write(nit)
+            
+            # Navegar al siguiente campo (configurado en YAML)
+            for _ in range(3):  # nit_tabs del config
+                pyautogui.press('tab')
+                time.sleep(0.1)
+            
+            rpa_logger.log_action(f"NIT ingresado correctamente: {nit}")
+            return True
             
         except Exception as e:
-            self.logger.error(f"Error obteniendo resumen: {e}")
-            return {'pending': 0, 'processing': 0, 'completed': 0, 'error': 0}
+            rpa_logger.log_error(f"Error ingresando NIT: {str(e)}")
+            return False
     
-    def _count_files(self, directory):
-        """Cuenta archivos en un directorio"""
+    def _fill_order_field(self, order_number: str) -> bool:
+        """Llena el campo de número de orden de compra"""
         try:
-            if not os.path.exists(directory):
-                return 0
+            if not order_number:
+                rpa_logger.log_error("Número de orden no proporcionado")
+                return False
             
-            files = glob.glob(os.path.join(directory, "*.json"))
-            return len(files)
+            rpa_logger.log_action(f"Ingresando orden de compra: {order_number}")
             
-        except Exception:
-            return 0
+            # Buscar campo de orden de compra
+            template_path = os.path.join(self.project_root, "rpa", "vision", "reference_images", "orden_compra.png")
+            if os.path.exists(template_path):
+                template = self.template_matcher.load_template_image(template_path)
+                if template:
+                    coordinates = self.template_matcher.find_template(template)
+                    if coordinates:
+                        pyautogui.click(coordinates[0], coordinates[1])
+                        time.sleep(0.5)
+            
+            # Ingresar número de orden
+            pyautogui.write(order_number)
+            
+            # Navegar al siguiente campo
+            for _ in range(4):  # orden_compra_tabs del config
+                pyautogui.press('tab')
+                time.sleep(0.1)
+            
+            rpa_logger.log_action(f"Orden de compra ingresada correctamente: {order_number}")
+            return True
+            
+        except Exception as e:
+            rpa_logger.log_error(f"Error ingresando orden de compra: {str(e)}")
+            return False
+    
+    def _fill_date_field(self, delivery_date: str) -> bool:
+        """Llena el campo de fecha de entrega"""
+        try:
+            if not delivery_date:
+                rpa_logger.log_error("Fecha de entrega no proporcionada")
+                return False
+            
+            rpa_logger.log_action(f"Ingresando fecha de entrega: {delivery_date}")
+            
+            # Buscar campo de fecha
+            template_path = os.path.join(self.project_root, "rpa", "vision", "reference_images", "fecha_entrega.png")
+            if os.path.exists(template_path):
+                template = self.template_matcher.load_template_image(template_path)
+                if template:
+                    coordinates = self.template_matcher.find_template(template)
+                    if coordinates:
+                        pyautogui.click(coordinates[0], coordinates[1])
+                        time.sleep(0.5)
+            
+            # Limpiar campo y ingresar fecha
+            pyautogui.hotkey('ctrl', 'a')
+            pyautogui.write(delivery_date)
+            
+            # Navegar al siguiente campo
+            for _ in range(4):  # fecha_entrega_tabs del config
+                pyautogui.press('tab')
+                time.sleep(0.1)
+            
+            rpa_logger.log_action(f"Fecha de entrega ingresada correctamente: {delivery_date}")
+            return True
+            
+        except Exception as e:
+            rpa_logger.log_error(f"Error ingresando fecha de entrega: {str(e)}")
+            return False
+    
+    def _process_order_items(self, items: list) -> bool:
+        """Procesa todos los items de la orden"""
+        try:
+            if not items:
+                rpa_logger.log_error("No hay items para procesar")
+                return False
+            
+            rpa_logger.log_action(f"Procesando {len(items)} items de la orden")
+            
+            # Buscar el primer artículo
+            template_path = os.path.join(self.project_root, "rpa", "vision", "reference_images", "primer_articulo.png")
+            if os.path.exists(template_path):
+                template = self.template_matcher.load_template_image(template_path)
+                if template:
+                    coordinates = self.template_matcher.find_template(template)
+                    if coordinates:
+                        pyautogui.click(coordinates[0], coordinates[1])
+                        time.sleep(0.5)
+            
+            for i, item in enumerate(items):
+                rpa_logger.log_action(f"Procesando item {i+1}/{len(items)}: {item.get('codigo', 'N/A')}")
+                
+                # Ingresar código del artículo
+                if 'codigo' in item:
+                    pyautogui.write(item['codigo'])
+                    
+                    # Navegar a cantidad
+                    for _ in range(2):  # item_code_tabs del config
+                        pyautogui.press('tab')
+                        time.sleep(0.1)
+                    
+                    # Ingresar cantidad
+                    if 'cantidad' in item:
+                        pyautogui.write(str(item['cantidad']))
+                    
+                    # Si no es el último item, navegar al siguiente
+                    if i < len(items) - 1:
+                        for _ in range(3):  # tabs para próximo item
+                            pyautogui.press('tab')
+                            time.sleep(0.1)
+            
+            rpa_logger.log_action("Todos los items procesados exitosamente")
+            return True
+            
+        except Exception as e:
+            rpa_logger.log_error(f"Error procesando items: {str(e)}")
+            return False
+    
+    def _finalize_order(self) -> bool:
+        """Finaliza y graba la orden de venta"""
+        try:
+            rpa_logger.log_action("Finalizando orden de venta")
+            
+            # Navegar al final de los totales
+            for _ in range(2):  # tabs_after_last_quantity del config
+                pyautogui.press('tab')
+                time.sleep(0.1)
+            
+            # Grabar la orden (Ctrl+S o botón específico)
+            pyautogui.hotkey('ctrl', 's')
+            time.sleep(get_delay('long') or 2.0)
+            
+            rpa_logger.log_action("Orden de venta finalizada exitosamente")
+            return True
+            
+        except Exception as e:
+            rpa_logger.log_error(f"Error finalizando orden: {str(e)}")
+            return False
+    
+    # Hereda get_pending_count, get_status_summary y _count_files de BaseRPAHandler

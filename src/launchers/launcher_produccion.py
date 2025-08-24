@@ -48,6 +48,15 @@ class LauncherProduccion:
             self.log_queue = queue.Queue()
             self.is_closing = False
             
+            # Inicializar el handler RPA completo
+            try:
+                from rpa.modules.production_order.production_order_handler import ProductionOrderHandler
+                self.rpa_handler = ProductionOrderHandler()
+                self.log_message("✅ Handler RPA de producción inicializado correctamente")
+            except Exception as e:
+                self.rpa_handler = None
+                self.log_message(f"❌ Error inicializando handler RPA: {str(e)}")
+            
             # Crear interfaz
             self.create_widgets()
             
@@ -321,28 +330,34 @@ class LauncherProduccion:
             self.stop_system()
     
     def _run_production_processing(self):
-        """Ejecuta el procesamiento de órdenes de producción"""
+        """Ejecuta el procesamiento de órdenes de producción con RPA completo"""
         try:
-            # Importar el módulo de producción
-            from rpa.modules.production_order.production_order_handler import ProductionOrderHandler
+            # Verificar que el handler RPA esté disponible
+            if not self.rpa_handler:
+                self.log_message("❌ Handler RPA no disponible - inicializando...")
+                try:
+                    from rpa.modules.production_order.production_order_handler import ProductionOrderHandler
+                    self.rpa_handler = ProductionOrderHandler()
+                    self.log_message("✅ Handler RPA inicializado correctamente")
+                except Exception as e:
+                    self.log_message(f"❌ Error inicializando handler: {e}")
+                    return
             
-            self.log_message("🏭 Importando módulo de órdenes de producción...")
-            
-            # Crear instancia del handler
-            handler = ProductionOrderHandler()
-            
+            self.log_message("🏭 Iniciando procesamiento RPA completo de órdenes de producción...")
+            self.log_message("📡 Conectando al escritorio remoto...")
+            self.log_message("🖥️ Detectando escritorio SAP...")
+            self.log_message("📂 Navegando al módulo de producción...")
             self.log_message("🔍 Verificando archivos pendientes...")
             
-            # Procesar archivos
-            result = handler.process_pending_orders()
+            # Procesar archivos usando el handler completo
+            result = self.rpa_handler.process_pending_orders()
             
-            self.log_message(f"✅ Procesamiento completado: {result}")
+            self.log_message(f"✅ Procesamiento RPA completado: {result}")
+            self.log_message("📸 Screenshots capturados")
+            self.log_message("☁️ Archivos subidos a Google Drive")
             
-        except ImportError as e:
-            self.log_message(f"❌ Error importando módulo: {e}")
-            self.log_message("Verificar que el módulo production_order esté disponible")
         except Exception as e:
-            self.log_message(f"❌ Error en procesamiento: {e}")
+            self.log_message(f"❌ Error en procesamiento RPA: {e}")
             self.log_message(f"Detalles: {traceback.format_exc()}")
         finally:
             # Restaurar estado

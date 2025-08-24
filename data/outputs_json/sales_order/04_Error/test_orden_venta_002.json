@@ -1,0 +1,22 @@
+{
+  "orden_compra": "TEST-001-2024",
+  "fecha_entrega": "15/12/2024",
+  "comprador": {
+    "nit": "890900123-4",
+    "nombre": "Cliente Prueba SAP"
+  },
+  "items": [
+    {
+      "descripcion": "Producto de prueba mejorada",
+      "codigo": "PROD-TEST-001",
+      "cantidad": 50,
+      "precio_unitario": 100,
+      "precio_total": 5000,
+      "fecha_entrega": "15/12/2024"
+    }
+  ],
+  "valor_base": 5000,
+  "total_items_unicos": 1,
+  "numero_items_totales": 50,
+  "test_secuencia_mejorada": true
+}

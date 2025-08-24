@@ -16,7 +16,8 @@ import threading
 import time
 
 # Agregar el directorio raíz al path
-sys.path.append(os.path.dirname(os.path.abspath(__file__)))
+project_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+sys.path.append(project_root)
 
 class LauncherVentasMejorado:
     def __init__(self):
@@ -31,9 +32,10 @@ class LauncherVentasMejorado:
         self.processing_thread = None
         self.stop_processing = False
         self.current_file = None
+        self.rpa_handler = None
         
-        # Configurar directorios
-        self.base_dir = "data/outputs_json/sales_order"
+        # Configurar directorios por defecto
+        self.base_dir = os.path.join(project_root, "data", "outputs_json", "sales_order")
         self.pending_dir = os.path.join(self.base_dir, "01_Pendiente")
         self.processing_dir = os.path.join(self.base_dir, "02_Procesando")
         self.completed_dir = os.path.join(self.base_dir, "03_Completado")
@@ -46,12 +48,15 @@ class LauncherVentasMejorado:
             'start_time': None
         }
         
-        # Crear interfaz
+        # Crear interfaz PRIMERO
         self.create_interface()
         
+        # DESPUÉS inicializar el handler RPA
+        self._initialize_rpa_handler()
+        
         # Log inicial
-        self.log_message("🚀 Launcher de Ventas Mejorado iniciado")
-        self.log_message(f"📁 Directorio de pendientes: {self.pending_dir}")
+        self.log_message("Launcher de Ventas Mejorado iniciado")
+        self.log_message(f"Directorio de pendientes: {self.pending_dir}")
         self.update_status()
     
     def create_interface(self):
@@ -238,8 +243,13 @@ class LauncherVentasMejorado:
                 time.sleep(15)  # Esperar más tiempo en caso de error
     
     def process_file_with_rpa(self, file_path):
-        """Procesa un archivo usando el RPA (simulado por ahora)"""
+        """Procesa un archivo usando el RPA completo con navegación SAP"""
         try:
+            # Verificar que el handler RPA esté disponible
+            if not self.rpa_handler:
+                self.log_message(f"   ❌ Handler RPA no disponible")
+                return False
+            
             # Leer el archivo JSON
             with open(file_path, 'r', encoding='utf-8') as f:
                 data = json.load(f)
@@ -250,15 +260,24 @@ class LauncherVentasMejorado:
             self.log_message(f"      - NIT: {data.get('comprador', {}).get('nit', 'N/A')}")
             self.log_message(f"      - Items: {len(data.get('items', []))}")
             
-            # Simular procesamiento RPA
-            self.log_message(f"   🔄 Iniciando procesamiento RPA...")
+            # Procesar usando el RPA handler completo
+            self.log_message(f"   🔄 Iniciando procesamiento RPA completo...")
+            self.log_message(f"   📡 Conectando al escritorio remoto...")
+            self.log_message(f"   🖥️ Detectando escritorio SAP...")
+            self.log_message(f"   📂 Navegando al módulo de órdenes de venta...")
+            self.log_message(f"   ✏️ Procesando datos en SAP...")
             
-            # Simular tiempo de procesamiento
-            time.sleep(5)  # Simular 5 segundos de procesamiento
+            # Usar el handler real para procesar el archivo
+            success = self.rpa_handler.process_single_file(file_path)
             
-            # Simular éxito (por ahora)
-            self.log_message(f"   ✅ Procesamiento RPA completado")
-            return True
+            if success:
+                self.log_message(f"   ✅ Procesamiento RPA completado exitosamente")
+                self.log_message(f"   📸 Screenshot capturado")
+                self.log_message(f"   ☁️ Archivo subido a Google Drive")
+            else:
+                self.log_message(f"   ❌ Error en procesamiento RPA")
+            
+            return success
             
         except json.JSONDecodeError as e:
             self.log_message(f"   ❌ Error JSON en archivo: {str(e)}")
@@ -286,6 +305,30 @@ class LauncherVentasMejorado:
         except Exception as e:
             self.log_message(f"❌ Error actualizando estado: {str(e)}")
     
+    def _initialize_rpa_handler(self):
+        """Inicializa el handler RPA completo"""
+        try:
+            # Suprimir temporalmente las advertencias de OpenCV
+            import os
+            os.environ['OPENCV_LOG_LEVEL'] = 'SILENT'
+            
+            from rpa.modules.sales_order.sales_order_handler import SalesOrderHandler
+            self.rpa_handler = SalesOrderHandler()
+            
+            # Actualizar directorios con los del handler
+            self.base_dir = self.rpa_handler.base_dir
+            self.pending_dir = self.rpa_handler.pending_dir
+            self.processing_dir = self.rpa_handler.processing_dir
+            self.completed_dir = self.rpa_handler.completed_dir
+            self.error_dir = self.rpa_handler.error_dir
+            
+            self.log_message("OK - Handler RPA de ventas inicializado correctamente")
+            self.log_message("AVISO - Algunas imagenes de referencia pueden no estar disponibles (normal en primera ejecucion)")
+        except Exception as e:
+            self.rpa_handler = None
+            self.log_message(f"ERROR - Error inicializando handler RPA: {str(e)}")
+            self.log_message("AVISO - Se continuara con funcionalidad limitada")
+    
     def log_message(self, message):
         """Agrega un mensaje al log"""
         timestamp = datetime.now().strftime("%H:%M:%S")
@@ -310,13 +353,13 @@ class LauncherVentasMejorado:
 def main():
     """Función principal"""
     try:
-        print("🚀 Iniciando Launcher de Ventas Mejorado...")
+        print("Iniciando Launcher de Ventas Mejorado...")
         app = LauncherVentasMejorado()
-        print("✅ Launcher creado exitosamente")
+        print("Launcher creado exitosamente")
         app.run()
-        print("👋 Launcher cerrado correctamente")
+        print("Launcher cerrado correctamente")
     except Exception as e:
-        print(f"❌ Error: {e}")
+        print(f"Error: {e}")
         input("Presiona Enter para salir...")
 
 if __name__ == "__main__":
