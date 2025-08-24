@@ -1,0 +1,93 @@
+{
+  "orden_compra": "4500224164",
+  "fecha_documento": "2025-08-15",
+  "fecha_entrega": "2025-09-08",
+  
+  "comprador": {
+    "nombre": "COMODIN S.A.S.",
+    "nit": "CN800069933"
+  },
+  
+  "items": [
+    {
+      "codigo": "14010187001",
+      "descripcion": "BOL_PAPE_CHE_9.2X9.4_MINIG_PL, CRU120703",
+      "cantidad": 5000,
+      "precio_unitario": 172,
+      "precio_total": 860000,
+      "fecha_entrega": "2025-09-08"
+    },
+    {
+      "codigo": "14010636001",
+      "descripcion": "ETI_CAR/CUE_CHE_13X7_F_HIGH_R, CAF181148",
+      "cantidad": 1100,
+      "precio_unitario": 1321,
+      "precio_total": 1453100,
+      "fecha_entrega": "2025-09-08"
+    }
+  ],
+  
+  "valor_total": 2313100,
+  "total_items_unicos": 2,
+  "numero_items_totales": 6100,
+  
+  "proveedor": {
+    "nombre": "TAMAPRINT S.A.S",
+    "nit": "CN900851655",
+    "datos_adicionales": {
+      "direccion": "CR 55 90 SUR 182",
+      "telefono": "3229690-1",
+      "email": "tamaprint.insumos@gco.com",
+      "contacto": null,
+      "ciudad": "LA ESTRELLA",
+      "departamento": "ANTIOQUIA",
+      "pais": "Colombia"
+    }
+  },
+  
+  "condiciones_comerciales": {
+    "forma_pago": "45 dias",
+    "dias_pago": 45,
+    "moneda": "COP",
+    "incoterm": null,
+    "lugar_entrega": "CR 52 # 19 80",
+    "datos_adicionales": {
+      "ciudad_entrega": "MEDELLIN",
+      "departamento_entrega": "ANTIOQUIA",
+      "pais_entrega": "Colombia",
+      "grupo_compras": "INSUMOS CHE"
+    }
+  },
+  
+  "observaciones": null,
+  
+  "informacion_adicional": {
+    "terminos_condiciones": [
+      "Recuerde las fechas límite de recepción de la factura física y electrónica",
+      "Recuerde relacionar el número de orden de compra en el documento de cobro"
+    ],
+    "clausulas": [],
+    "firmas": {},
+    "documentos_relacionados": {
+      "referencias_pr": ["MINIGRIP PLUMILLAS 2021", "FEM HIGH RISE 2022"],
+      "colores_pr": ["CRUDA", "CAFE"]
+    },
+    "notas_especiales": null,
+    "email_facturacion": "recepcionfeco@gco.com.co",
+    "otros": {
+      "direccion_comprador": "CL 14 52 A 372",
+      "telefono_comprador": "6048891",
+      "contacto_comprador": "Yuliana Zapata",
+      "ciudad_comprador": "MEDELLÍN",
+      "departamento_comprador": "ANTIOQUIA",
+      "pais_comprador": "Colombia"
+    }
+  },
+  
+  "metadatos": {
+    "tipo_documento": "ORDEN_COMPRA",
+    "total_paginas": 1,
+    "idioma": "es",
+    "fecha_extraccion": "2024-12-19"
+  }
+}

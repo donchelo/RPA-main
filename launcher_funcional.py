@@ -68,9 +68,13 @@ class RPALauncherFuncional:
         # Inicializar componentes del RPA DESPUÉS
         self.initialize_rpa_components()
         
+        # Seleccionar módulo de ventas por defecto
+        self.select_module("sales_order")
+        
         # Log inicial
         self.log_message("Launcher RPA TAMAPRINT v3.0 iniciado")
         self.log_message("Sistema listo para procesar órdenes de venta")
+        self.log_message("✅ Módulo de ventas seleccionado automáticamente")
         self.update_queue_status()
     
     def initialize_rpa_components(self):
